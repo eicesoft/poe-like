@@ -1,0 +1,88 @@
+{
+  "viewport": "1280x720",
+  "cssNumbers": {
+    "panel": {
+      "left": 14,
+      "bottom": 19,
+      "pad": 4,
+      "gap": 8,
+      "border": 1,
+      "btnW": 44,
+      "btnH": 44
+    },
+    "skillbar": {
+      "bottom": 18,
+      "padX": 9,
+      "gap": 7
+    },
+    "log": {
+      "left": 14,
+      "width": 300,
+      "bottom": 92
+    },
+    "loot": {
+      "right": 14,
+      "bottom": 96,
+      "w": 340,
+      "h": 141
+    },
+    "sfx": {
+      "right": 14,
+      "bottom": 20,
+      "s": 34
+    },
+    "help": {
+      "bottom": 2,
+      "h": 14,
+      "w": 470
+    }
+  },
+  "rects": {
+    "panelBar": {
+      "x": 14,
+      "y": 647,
+      "w": 210,
+      "h": 54
+    },
+    "skillbar": {
+      "x": 427,
+      "y": 634,
+      "w": 426,
+      "h": 68
+    },
+    "log": {
+      "x": 14,
+      "y": 466,
+      "w": 300,
+      "h": 162
+    },
+    "lootBar": {
+      "x": 926,
+      "y": 483,
+      "w": 340,
+      "h": 141
+    },
+    "sfxToggle": {
+      "x": 1232,
+      "y": 666,
+      "w": 34,
+      "h": 34
+    },
+    "helpHint": {
+      "x": 405,
+      "y": 704,
+      "w": 470,
+      "h": 14
+    }
+  },
+  "conflicts": [],
+  "outOfView": [],
+  "pausedVisibility": {
+    "PAUSE 段存在": true,
+    "#app.paused #hud 隐藏": true,
+    "暂停时 #panel-bar 例外可见（可点）": true,
+    "暂停时 .sfx-toggle 例外可见": true
+  },
+  "PASS": true,
+  "note": "#help-hint 的宽度按文字长度估算（_hint-width.mjs），并用 CSS 的 max-width:min(720px,46vw) 限宽后取较小值"
+}

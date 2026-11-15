@@ -1,0 +1,89 @@
+  ✓ [S0] 模块可加载（ui.js / panel-bar.js / pause.js / stats-ui.js） — PASS · PANEL_ITEMS=属性/天赋/技能/装备 PauseMenu=true stats=collectStatsData,decomposeStat,default,openStats
+  ✓ [S1] new GameUI(game) 不抛异常 — PASS · modalOpen=null pauseMenu=懒创建
+  ✓ [S2] #panel-bar 挂在 #hud 下，4 个按钮=属性/天赋/技能/装备，各带内联 SVG — PASS · acts=stats,talents,skills,equipment labels=属性/天赋/技能/装备 svg=4/4
+  ✓ [S3] 点击 4 个底部按钮：打开 #modal + 标题 + .active，再点同一按钮关闭 — PASS · stats: open=true title="属性面板" active=[stats] modalOpen=stats bodyOpen=true ;   → 再点关闭 closed=true modalOpen=null ; talents: open=true title="天赋树" active=[talents] modalOpen=talents bodyOpen=true ;   → 再点关闭 closed=true modalOpen=null ; skills: open=true title="技能 · 天赋分叉" active=[skills] modalOpen=skills bodyOpen=true ;   → 再点关闭 closed=true modalOpen=null ; equipment: open=true title="背包 · 装备" active=[equipment] modalOpen=inventory bodyOpen=true ;   → 再点关闭 closed=true modalOpen=null
+  ✓ [S4] ESC 状态机：关面板 → 暂停 → 恢复（game.paused 与 ui 同步） — PASS · open stats modalOpen=stats ; ESC#1 → panel modalOpen=null hidden=true paused=false ; ESC#2 → paused paused=true game.paused=true pauseMenu.isOpen=true ; ESC#3 → resumed paused=false game.paused=false
+  ✓ [S4b] 暂停中点击属性面板：仍暂停（pauseReason=panel）、面板收起后回到暂停菜单 — PASS · 暂停后 pauseMenu.root=true show=true ; 开属性面板 paused=true modalOpen=stats 卡片show=false pauseReason=panel ; 关面板后 paused=true 卡片show=true ; 收尾 paused=false
+  ✓ [S5] 暂停键盘：游戏键被吞 / 面板中按键交还 / ESC 状态机 — PASS · 暂停中 W 被吞=true 2 被吞=true ; 面板中 W 交还=false ESC 交给状态机=true → modalOpen=null paused=true ; 收尾：未暂停时不接管=false paused=false
+  ✓ [S6] 20 轮暂停/面板开关后 #pause-menu 不增长、#panel-bar 不增长、无重复 id — PASS · #pause-menu 1→1、#panel-bar 1→1、重复 id=[]
+  ✓ [S7] 暂停菜单：8 个动作（继续/属性/天赋/技能/装备/音效/保存/返回主菜单） — PASS · ACTIONS=[resume,stats,talents,skills,equipment,sfx,save,quit] DOM .pause-btn 数=0（桩 querySelectorAll 限制，需真机确认渲染）
+  ✓ [S8] 属性面板有标题 + 非空内容 — PASS · title="属性面板" 子节点=28 文本长度=12129 片段="点击带 ▾ 的属性行展开来源拆解 · 悬停装备查看完整词缀等级Lv.1经验 0.0%经验0 / 400.0%生命100 / 100▾回复 0.0/秒法力50 / 50▾回复 0.0/秒移动速度6.2 米/秒▾+0% 加成武器伤害0 - 0▾"
+  ✓ [S9] main.js runHotkey：isInputBlocked() 在 spec.panel 之前（面板打开时再按 C/P/K/E/Tab 会被吞） — PASS · isInputBlocked 在第 692 行、spec.panel 在第 690 行（692 vs 690）
+  ✓ [S10] main.js: 暂停时有独立键盘通道（handlePausedKey：ESC→escapeRoute，其他键→ui.handlePauseKey），不再依赖 readInput 消费 — PASS · handlePausedKey 定义=true、捕获层调用=true、暂停里直接 escapeRoute=true；readInput 第 788 行、其内 clear 第 794 行、暂停分支第 566 行
+
+{
+  "results": [
+    {
+      "id": "S0",
+      "name": "模块可加载（ui.js / panel-bar.js / pause.js / stats-ui.js）",
+      "status": "PASS",
+      "detail": "PANEL_ITEMS=属性/天赋/技能/装备 PauseMenu=true stats=collectStatsData,decomposeStat,default,openStats"
+    },
+    {
+      "id": "S1",
+      "name": "new GameUI(game) 不抛异常",
+      "status": "PASS",
+      "detail": "modalOpen=null pauseMenu=懒创建"
+    },
+    {
+      "id": "S2",
+      "name": "#panel-bar 挂在 #hud 下，4 个按钮=属性/天赋/技能/装备，各带内联 SVG",
+      "status": "PASS",
+      "detail": "acts=stats,talents,skills,equipment labels=属性/天赋/技能/装备 svg=4/4"
+    },
+    {
+      "id": "S3",
+      "name": "点击 4 个底部按钮：打开 #modal + 标题 + .active，再点同一按钮关闭",
+      "status": "PASS",
+      "detail": "stats: open=true title=\"属性面板\" active=[stats] modalOpen=stats bodyOpen=true ;   → 再点关闭 closed=true modalOpen=null ; talents: open=true title=\"天赋树\" active=[talents] modalOpen=talents bodyOpen=true ;   → 再点关闭 closed=true modalOpen=null ; skills: open=true title=\"技能 · 天赋分叉\" active=[skills] modalOpen=skills bodyOpen=true ;   → 再点关闭 closed=true modalOpen=null ; equipment: open=true title=\"背包 · 装备\" active=[equipment] modalOpen=inventory bodyOpen=true ;   → 再点关闭 closed=true modalOpen=null"
+    },
+    {
+      "id": "S4",
+      "name": "ESC 状态机：关面板 → 暂停 → 恢复（game.paused 与 ui 同步）",
+      "status": "PASS",
+      "detail": "open stats modalOpen=stats ; ESC#1 → panel modalOpen=null hidden=true paused=false ; ESC#2 → paused paused=true game.paused=true pauseMenu.isOpen=true ; ESC#3 → resumed paused=false game.paused=false"
+    },
+    {
+      "id": "S4b",
+      "name": "暂停中点击属性面板：仍暂停（pauseReason=panel）、面板收起后回到暂停菜单",
+      "status": "PASS",
+      "detail": "暂停后 pauseMenu.root=true show=true ; 开属性面板 paused=true modalOpen=stats 卡片show=false pauseReason=panel ; 关面板后 paused=true 卡片show=true ; 收尾 paused=false"
+    },
+    {
+      "id": "S5",
+      "name": "暂停键盘：游戏键被吞 / 面板中按键交还 / ESC 状态机",
+      "status": "PASS",
+      "detail": "暂停中 W 被吞=true 2 被吞=true ; 面板中 W 交还=false ESC 交给状态机=true → modalOpen=null paused=true ; 收尾：未暂停时不接管=false paused=false"
+    },
+    {
+      "id": "S6",
+      "name": "20 轮暂停/面板开关后 #pause-menu 不增长、#panel-bar 不增长、无重复 id",
+      "status": "PASS",
+      "detail": "#pause-menu 1→1、#panel-bar 1→1、重复 id=[]"
+    },
+    {
+      "id": "S7",
+      "name": "暂停菜单：8 个动作（继续/属性/天赋/技能/装备/音效/保存/返回主菜单）",
+      "status": "PASS",
+      "detail": "ACTIONS=[resume,stats,talents,skills,equipment,sfx,save,quit] DOM .pause-btn 数=0（桩 querySelectorAll 限制，需真机确认渲染）"
+    },
+    {
+      "id": "S8",
+      "name": "属性面板有标题 + 非空内容",
+      "status": "PASS",
+      "detail": "title=\"属性面板\" 子节点=28 文本长度=12129 片段=\"点击带 ▾ 的属性行展开来源拆解 · 悬停装备查看完整词缀等级Lv.1经验 0.0%经验0 / 400.0%生命100 / 100▾回复 0.0/秒法力50 / 50▾回复 0.0/秒移动速度6.2 米/秒▾+0% 加成武器伤害0 - 0▾\""
+    },
+    {
+      "id": "S9",
+      "name": "main.js runHotkey：isInputBlocked() 在 spec.panel 之前（面板打开时再按 C/P/K/E/Tab 会被吞）",
+      "status": "PASS",
+      "detail": "isInputBlocked 在第 692 行、spec.panel 在第 690 行（692 vs 690）"
+    },
+    {
+      "id": "S10",
+      "name": "main.js: 暂停时有独立键盘通道（handlePausedKey：ESC→escapeRoute，其他键→ui.handlePauseKey），不再依赖 readInput 消费",
+      "status": "PASS",
+      "detail": "handlePausedKey 定义=true、捕获层调用=true、暂停里直接 escapeRoute=true；readInput 第 788 行、其内 clear 第 794 行、暂停分支第 566 行"
+    }
+  ]
+}

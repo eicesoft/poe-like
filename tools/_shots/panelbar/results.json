@@ -1,0 +1,30 @@
+{
+  "ranAt": "2026-11-14T11:23:09.892Z",
+  "durationMs": 15224,
+  "version": null,
+  "launcherError": "DevTools 端口 9339 未响应（浏览器没起来或已崩溃）",
+  "results": [
+    {
+      "id": "ENV0",
+      "name": "运行环境：Node 版本 / 工作目录",
+      "status": "PASS",
+      "detail": "v24.22.3 · C:\\Users\\Kele\\Desktop\\poe-like",
+      "shots": []
+    },
+    {
+      "id": "ENV1",
+      "name": "静态服务在线（node tools/serve.mjs）",
+      "status": "PASS",
+      "detail": "http://127.0.0.1:5190/index.html → 200",
+      "shots": []
+    },
+    {
+      "id": "ENV2",
+      "name": "DevTools 已连接",
+      "status": "BLOCKED",
+      "detail": "DevTools 端口 9339 未响应（浏览器没起来或已崩溃）",
+      "shots": []
+    }
+  ],
+  "notes": []
+}

@@ -1,0 +1,524 @@
+
+[36m[1m▸ 属性系统 stats.js[0m
+  [32m✓[0m STAT_KEYS 包含契约要求的字段
+  [32m✓[0m aggregateStats 线性相加
+  [32m✓[0m aggregateStats 对 evasion/critChance/leech/cdr 做 clamp
+  [32m✓[0m aggregateStats 抗性不能超过 maxResistance
+  [32m✓[0m createBaseStats(1) 生命 120 / 法力 60 / 武器 12-22
+  [32m✓[0m recalcStats 保留血量比例
+  [32m✓[0m recalcStats 穿戴/脱下装备后属性可逆
+
+[36m[1m▸ 伤害公式 combat.js[0m
+  [32m✓[0m 无护甲无闪避：100 物理 → 100
+  [32m✓[0m 暴击 ×critMulti（默认 1.5）
+  [32m✓[0m 自定义 critMulti 生效
+  [32m✓[0m 护甲减免：armor=1000, 物理 100 → 50%
+  [32m✓[0m 元素抗性减免
+  [32m✓[0m evasion = 0.5 时大样本命中率 ≈ 50%
+  [32m✓[0m 命中事件推送 hit / crit / miss
+  [32m✓[0m dot 不会被闪避，且必中
+  [32m✓[0m 暴击率由 attack.critChance 决定（大样本）
+  [32m✓[0m 击杀玩家 → playerDeath 事件
+  [32m✓[0m 击杀怪物 → monsterKilled + kill 事件
+  [32m✓[0m 能量护盾优先吸收伤害
+  [32m✓[0m healEntity 不超过上限
+  [32m✓[0m applyBuff / removeBuff 影响最终属性
+  [32m✓[0m buff 到期自动移除并还原属性
+
+[36m[1m▸ 技能 skills.js[0m
+  [32m✓[0m createPlayer 初始化：1 级 / 120hp / 60mp / 5 技能 / 武器 12-22
+  [32m✓[0m 技能冷却与蓝量消耗
+  [32m✓[0m 蓝量不足无法施放且返回 false、不进入冷却
+  [32m✓[0m 战争践踏：以自身为圆心的圆形范围伤害 + 眩晕，范围外敌人不受影响
+  [32m✓[0m 旋风斩：按住持续掉蓝 + 每 0.18 秒伤害
+  [32m✓[0m 战吼：自身获得伤害 buff、敌人被减速
+  [32m✓[0m 血性狂暴：加攻速/暴击，且持续扣血
+  [32m✓[0m 坚毅图腾：生成召唤物并在范围内回蓝
+  [32m✓[0m 翻滚：瞬移并进入无敌，冷却 1.2s
+  [32m✓[0m 翻滚被墙阻挡时停在墙前
+  [32m✓[0m 技能事件推送 skillCast
+
+[36m[1m▸ 怪物 monsters.js[0m
+  [32m✓[0m 至少 7 种怪物模板，且 shape 合法
+  [32m✓[0m spawnMonster 插入 monsters / all / hash，并推 spawn 事件
+  [32m✓[0m makeLevelTable 随等级缩放
+  [32m✓[0m 怪物追击玩家
+  [32m✓[0m 怪物靠近后攻击玩家造成伤害
+  [32m✓[0m 怪物攻击不会穿过不可行走区域移动
+  [32m✓[0m 骸骨弓手发射投射物并能命中玩家
+  [32m✓[0m 地面效果造成持续伤害并到期消失
+  [32m✓[0m 怪物被击杀后从数组移除（死亡动画后）
+  [32m✓[0m 怪物词缀生效（坚韧 +40% 生命）
+  [32m✓[0m 精英/魔法怪词缀数量正确
+
+[36m[1m▸ 经验与升级 progression.js[0m
+  [32m✓[0m xpForLevel 随等级递增
+  [32m✓[0m 击杀怪物给经验（事件驱动流程）
+  [32m✓[0m 升级后 maxHp 增加且回满
+  [32m✓[0m xpProgress 返回进度
+
+[36m[1m▸ 刷怪器 spawner.js[0m
+  [32m✓[0m 若干秒内能量产小怪，且不超过上限
+  [32m✓[0m 地图等级越高上限越大
+  [32m✓[0m 波次开始时推 waveStart 事件
+  [32m✓[0m 第 15 波刷 2 只精英
+  [32m✓[0m 第 25 波刷 Boss，且 Boss 存活期间暂停小怪刷新
+  [32m✓[0m Boss 被击杀后恢复刷新并记录 bossKilled
+  [32m✓[0m 刷怪点距离玩家 >= 9
+
+[36m[1m▸ 掉落 loot.js[0m
+  [32m✓[0m 内置掉落表非空且结构完整
+  [32m✓[0m 稀有度规则：普通怪大样本下魔法/稀有概率合理
+  [32m✓[0m rollLoot 生成的物品结构能被 UI 显示
+  [32m✓[0m 稀有度键与 items 模块对齐：legendary 归一为 unique
+  [32m✓[0m world.itemGen 优先于内置掉落表（items 模块接口）
+  [32m✓[0m world.itemGen 抛异常时回退内置掉落表
+  [32m✓[0m Boss 必掉 2 件稀有（+ 概率传奇）
+  [32m✓[0m dropOrbs 生成魂火并推 orb 事件
+  [32m✓[0m pickupNearest 返回最近的拾取物
+  [32m✓[0m 掉落物 ttl 到期被清理
+
+[36m[1m▸ 数值手感（POE 风格）[0m
+  [32m✓[0m 前期 1-3 刀可杀普通小怪（husk / crawler）
+  [32m✓[0m 精英 3-5 秒可击杀（考虑技能 DPS）
+  [32m✓[0m Boss 15-30 秒可击杀
+  [32m✓[0m 怪物 lv1 伤害在 6-14 区间
+
+[36m[1m▸ updateCore 集成[0m
+  [32m✓[0m 完整跑 10 秒不报错，事件都带 type
+  [32m✓[0m Lead 覆盖 world.__rollLoot 时仍然正常掉落（钩子不冲突）
+  [32m✓[0m 玩家死亡后 world.player.dead 为 true 且玩家死亡事件只推一次
+  [32m✓[0m 固定步长 dt=1/60 下玩家移动速度符合 6.2 基准
+  [32m✓[0m moveSpeedMult 影响移动速度
+  [32m✓[0m updateCore 本身不推进 world.time（由 Lead 维护）
+  [32m✓[0m world.emit(type, payload) 双签名兼容
+  [32m✓[0m world.emit(evt) 单签名兼容
+  [32m✓[0m 参考 world.mapMods：怪物生命/伤害/速度提升，同屏上限提升
+  [32m✓[0m map.tier 作为地图等级使用（Lead 用 tier 表示难度）
+  [32m✓[0m 玩家死亡后停止刷怪
+
+[36m[1m▸ 地牢生成[0m
+  [32m✓[0m 100 个不同种子的地图全部连通、有个可走的起点
+  [32m✓[0m 同种子确定相同，不同种子不同
+  [32m✓[0m 地图尺寸随等级增大
+  [32m✓[0m 主题与房间数据齐全
+  [32m✓[0m worldBounds 内坐标可判走、线检测不穿墙
+  [32m✓[0m 地图词缀按等级数量递增，值合法
+
+[36m[1m▸ 地图词缀汇总[0m
+  [32m✓[0m 同类词缀叠加，vision 单独记录
+
+[36m[1m▸ 背包与装备[0m
+  [32m✓[0m 装备后统计生效，卸下后移除
+  [32m✓[0m 替换装备时旧装备回到背包
+  [32m✓[0m 主槽空时先填空槽而不是替换
+  [32m✓[0m 戒指可以进两个槽，盾牌只能进副手
+  [32m✓[0m 不兼容槽位拒绝装备
+  [32m✓[0m 背包满时不增加
+  [32m✓[0m 拾取最近掉落物
+  [32m✓[0m 排序：稀有优先
+  [32m✓[0m 出售给金币
+  [32m✓[0m itemStats 合并基础/词缀/隐式
+
+[36m[1m▸ 存档[0m
+  [32m✓[0m makeSave → validateSave 通过
+  [32m✓[0m 非法存档被拒
+
+[36m[1m▸ Input 焦点守卫[0m
+  [32m✓[0m 正常状态：keydown 记录按键，moveDir 给出方向
+  [32m✓[0m setGameKeysEnabled(false)：清空 keys/pressed，且 keydown/keyup 直接返回
+  [32m✓[0m 停用期间鼠标坐标仍然更新（面板里要能瞄准/悬停）
+  [32m✓[0m 重新启用后恢复响应（关掉面板还能继续玩）
+  [32m✓[0m clearPressed 只清"本帧按下"，不动按住状态与鼠标
+  [32m✓[0m blur：清空 keys / pressed / 鼠标按下
+  [32m✓[0m endFrame 语义不变（鼠标 clicked / rightClicked 清空，按住不清）
+
+[36m[1m▸ 存档 round-trip（save → load → applySave）[0m
+  [32m✓[0m localStorage 不可用（null）时 saveGame 静默返回 false
+  [32m✓[0m setItem 抛异常（隐私模式/配额满）时静默降级
+  [32m✓[0m makeSave 只取纯数据：不含 ui / actions / 函数 / 循环引用
+  [32m✓[0m 金币 / 装备 / 天赋 / 技能成长 全量一致
+  [32m✓[0m 存档里的空装备槽在读档后保持为空（新手武器不会"复活"）
+  [32m✓[0m applySave 拒绝脏数据（validateSave 非空 → false 且不改动游戏）
+  [32m✓[0m 老存档（缺技能升级三件套）读档时兜底成空表 / 0
+  [32m✓[0m 死亡瞬间存档：读档后不会卡在尸体状态
+  [32m✓[0m clearSave 之后 loadGame 返回 null / 开始界面回到「进入神庙」
+  [32m✓[0m 存档摘要：等级 / 层数 / 金币 / 游戏时长
+
+[36m[1m▸ main.js 全局状态写法规约[0m
+  [32m✓[0m game/ui/renderer/running/lastT/acc/input 不声明；写操作走 setState；纯赋值不出现
+
+[36m[1m▸ 快捷键路由表[0m
+  [32m✓[0m main.js 里不再有第二套面板快捷键（Tab 只走 HOTKEYS 一条路径）
+
+[36m[1m▸ 快捷键分流回归（面板不被阻塞 / 暂停可恢复）[0m
+  [32m✓[0m BUG1：面板已打开时 runHotkey('KeyP') 仍然切到天赋面板（不再被 isInputBlocked 挡掉）
+  [32m✓[0m BUG1：面板打开时"世界动作"热键仍被拦住（R 拾取 / T 换图不在面板里误触发）
+  [32m✓[0m BUG2：暂停时捕获层按 ESC 同步走到 escapeRoute（不依赖 readInput / frame 推进）
+  [32m✓[0m BUG2：暂停中面板打开时 ESC 只关面板（暂停保持），再按一次才恢复游戏
+  [32m✓[0m BUG2：暂停时其它键交给 ui.handlePauseKey（返回值=true 才吞掉，避免与暂停菜单双触发）
+  [32m✓[0m 正常游戏中：热键入队、由 flushHotkeys 消费一次（不在捕获层直接执行）
+
+[36m[1m▸ 集成 · 冒烟[0m
+  [32m✓[0m createGame 后核心对象就绪
+  [32m✓[0m 跑 10 秒 updateGame 不抛异常，且不出 NaN
+
+[36m[1m▸ 集成 · 战斗闭环[0m
+  [32m✓[0m 刷一只怪 → 用 updateGame 打死 → 经验与击杀数增长
+
+[36m[1m▸ 集成 · 升级[0m
+  [32m✓[0m grantXp 给足经验 → 等级 / maxHp / 天赋点都上升
+
+[36m[1m▸ 集成 · 拾取与装备[0m
+  [32m✓[0m 地上物品 → doPickup → 背包 → doEquipFromBag → 装备槽非空 + stats 变化
+
+[36m[1m▸ 集成 · 天赋[0m
+  [32m✓[0m doTakeTalent 相邻节点 → 已点天赋 +1、点数 -1
+
+[36m[1m▸ 集成 · 切图[0m
+  [32m✓[0m travelToNewMap → 层数 +1、怪物刷新、玩家位置可走
+
+[36m[1m▸ 集成 · 掉落[0m
+  [32m✓[0m 连续击杀 100 只怪 → 有掉落且物品字段齐全
+
+[36m[1m▸ 集成 · 稳定性[0m
+  [32m✓[0m 60 秒长跑（每帧真调 updateGame）无 NaN、无异常、数量不失控
+
+[36m[1m▸ 集成 · 性能[0m
+  [32m✓[0m 1000 步 updateGame 耗时 < 3 秒
+
+[36m[1m▸ 物品基底 bases.js[0m
+  [32m✓[0m 基底数量 >= 30 且 id 唯一
+  [32m✓[0m 每个基底字段合法（slot / tier / levelReq / icon / implicit）
+  [32m✓[0m 槽位覆盖齐全且包含约定的格子
+  [32m✓[0m 武器有 dmgMin < dmgMax；盾牌有 blockChance；靴子有移速
+  [32m✓[0m 高阶基底的数值明显强于低阶（同类型对比）
+
+[36m[1m▸ 稀有度 rarity.js[0m
+  [32m✓[0m RARITY 四种且使用 POE 配色
+  [32m✓[0m rollRarity 分布符合概率表（±2%）
+  [32m✓[0m 稀有度提升倍率确实提高稀有/传奇占比
+  [32m✓[0m rollRarity 只返回合法键
+
+[36m[1m▸ 词缀 affixes.js[0m
+  [32m✓[0m 前缀和后缀各 ≥ 40 条，id 唯一
+  [32m✓[0m 每条词缀结构合法，tiers 从强到弱（levelReq 递减）
+  [32m✓[0m 覆盖了必需的属性类别
+  [32m✓[0m 词缀数值键覆盖所有抗性键
+  [32m✓[0m rollAffixes：normal 0 条、magic 1-2 条、rare 4-6 条
+  [32m✓[0m rollAffixes：rare 的前缀/后缀都在 2-3 条
+  [32m✓[0m 词缀 group 不冲突（同组互斥，含前缀与后缀之间）
+  [32m✓[0m 词缀档位的 levelReq 都 <= 物品等级
+
+[36m[1m▸ 传奇 unique.js[0m
+  [32m✓[0m 至少 8 件传奇，字段齐全
+  [32m✓[0m 所有传奇的基底都存在
+  [32m✓[0m tryUnique 返回合法且等级合适的传奇
+
+[36m[1m▸ 物品生成 itemgen.js[0m
+  [32m✓[0m generateItem 产出字段完整且合法
+  [32m✓[0m 词缀数量与稀有度相符
+  [32m✓[0m 武器有 dmgMin < dmgMax，防具没有武器伤害
+  [32m✓[0m 1000 次生成不产生重复 uid
+  [32m✓[0m generateItem 的 slot 过滤：ring 一定产出戒指，offhand 产出盾/武器
+  [32m✓[0m baseId 指定时按基底生成
+  [32m✓[0m forceUnique 能触发传奇
+  [32m✓[0m 指定 slot + forceUnique 时类型依然匹配
+  [32m✓[0m 物品等级越高，武器伤害越高（平均值对比）
+  [32m✓[0m generateDrop 同步且永不抛异常
+  [32m✓[0m fallbackItem 返回合法普通物品
+  [32m✓[0m rerollItem 生成新物品且稀有度不变
+
+[36m[1m▸ 物品展示 itemStatLines / itemToTooltipHTML / itemScore[0m
+  [32m✓[0m itemStatLines 返回非空数组，每行有 text 和 color
+  [32m✓[0m 武器 itemStatLines 含伤害行；传奇含传奇效果行
+  [32m✓[0m itemToTooltipHTML 输出非空 HTML 字符串且含 <div
+  [32m✓[0m tooltip 的 compare 参数会追加对比行
+  [32m✓[0m tooltip 防 XSS：恶意字段被转义
+  [32m✓[0m itemScore：稀有度越高、等级越高分数越高（同槽位平均）
+
+[36m[1m▸ 天赋树 talentTree.js[0m
+  [32m✓[0m 节点数量 >= 110，id 唯一
+  [32m✓[0m 每个节点字段完整
+  [32m✓[0m 起始节点存在且 id 为 start-warrior
+  [32m✓[0m 含 3-4 个以上的 keystone 且有明显效果
+  [32m✓[0m 天赋节点 stats 键全部在 StatBlock 键集合内
+  [32m✓[0m 天赋树连通性：从 START_NODE 出发 BFS 可达全部节点
+  [32m✓[0m neighbors 双向一致
+  [32m✓[0m 坐标布局：三环半径 + 主干（环上节点距离中心约 140/300/470）
+  [32m✓[0m canAllocate：只有相邻已点亮才可加点
+  [32m✓[0m aggregateTalentStats 汇总数值
+  [32m✓[0m talentStats 统计信息
+
+[36m[1m▸ 技能树 skillTree.js[0m
+  [32m✓[0m 包含 core 的 5 个技能（1 号是 stomp 战争践踏）
+  [32m✓[0m 每个技能 9-12 个节点，字段合法（含 branch / group）
+  [32m✓[0m skillNodeById 全局可查
+  [32m✓[0m skillEffectsForSkill：无加点时为中性值（含 multiplierBonuses 默认 1）
+  [32m✓[0m skillEffectsForSkill 汇总正确（伤害/半径/冷却按节点 effects 累加）
+  [32m✓[0m 前置未满足的节点不生效（L2 需要 L1，终极需要走通一条支线）
+  [32m✓[0m 档位超过 maxRank 会被裁剪；负数/非法档位忽略
+  [32m✓[0m cooldownMult 有下限保护
+  [32m✓[0m bloodRage 的攻速类效果汇总进 stats.attackSpeedMult
+
+[36m[1m▸ 统一出口 index.js[0m
+  [32m✓[0m 关键导出都存在
+  [32m✓[0m compareItems / describeItem 可用
+
+[36m[1m▸ 模块纯净性（不依赖浏览器 / DOM）[0m
+  [32m✓[0m 所有 items 模块在 Node 下可导入且不触碰 window/document
+
+[36m[1m▸ 底部面板按钮列（PanelBar）[0m
+  [32m✓[0m 安装 DOM 桩并创建 GameUI（按钮列已挂到 #hud）
+  [32m✓[0m 4 个按钮：data-act / 内联 SVG 图标 / 中文名 / <kbd> 快捷键
+  [32m✓[0m click → 打开对应面板，modalOpen 正确、按钮 .active
+  [32m✓[0m 直接切换到另一个面板：旧按钮取消高亮（暂停/遮罩期间也能切）
+  [32m✓[0m 再次 click 同一个按钮 → closeModals（modalOpen=null，按钮取消高亮）
+  [32m✓[0m 装备按钮 ↔ modalOpen=inventory 双向对应；openPanel 带别名
+  [32m✓[0m openModal / closeModals 直接调用也会同步按钮列
+  [32m✓[0m 属性面板：stats-ui 可用时打开，缺席时只记日志不崩
+  [32m✓[0m 角标：天赋点 3 / 技能点 3，>99 显示 99+
+  [32m✓[0m badgeText 纯函数：0/负值/小数/大数
+  [32m✓[0m 点数变化后：onEvents 立即刷、update() 最多 1Hz 刷（不每帧写 DOM）
+  [32m✓[0m 等级变化立即刷角标（不等 1Hz）
+  [32m✓[0m 键盘：按钮是原生 <button>（Tab 可聚焦 + Enter 触发 click）
+  [32m✓[0m 独立实例：PanelBar 可单独 new（DOM 挂了再建也不会重复）
+  [32m✓[0m #panel-bar 全局唯一：第二个 GameUI 接管已有节点，不重复挂载
+  [32m✓[0m 布局：底部左下角横排一排 4 个方形按钮（CSS 静态断言）
+  [32m✓[0m 极弱 DOM 桩（appendChild 不挂 parentNode、querySelector 返回新节点）也不崩
+
+[36m[1m▸ ESC 暂停状态机[0m
+  [32m✓[0m 初始化：未暂停、没有暂停菜单 DOM（惰性创建）
+  [32m✓[0m ESC #1：打开暂停菜单并冻结世界（game.paused / game.pauseReason）
+  [32m✓[0m ESC #2：关闭暂停菜单并继续（画布恢复原样）
+  [32m✓[0m ESC 幂等/往返：连开连关 5 次状态始终正确，DOM 不重复创建
+  [32m✓[0m 有面板打开时 ESC 只关面板，不会顺手打开暂停菜单
+  [32m✓[0m 暂停中打开面板：不解除暂停，暂停卡片让位；关面板后回到暂停菜单
+  [32m✓[0m 暂停中打开属性/天赋/技能面板都可以，并且暂停保持
+  [32m✓[0m 暂停时面板开着也能正常渲染技能树（真实 openSkills）
+  [32m✓[0m togglePause 幂等；暂停菜单的「继续游戏」按钮执行 togglePause(false)
+
+[36m[1m▸ 暂停菜单按钮[0m
+  [32m✓[0m 8 个按钮都有 data-act / title / aria-label
+  [32m✓[0m 每个按钮的 .pb-ico 都是内联 SVG，且 8 个 act 齐全（无 emoji 图标）
+  [32m✓[0m 点击「天赋」按钮（真实事件）打开天赋面板且保持暂停
+  [32m✓[0m 音效按钮调用 ui.toggleSfx()
+  [32m✓[0m 保存按钮：有 game.actions.save 时可用，点击调用它并写日志
+  [32m✓[0m 保存按钮：没有 game.actions.save 时 disabled 且显示「存档不可用」
+  [32m✓[0m 返回主菜单需要二次确认：第一次只进入确认态，2.5s 后自动复原
+  [32m✓[0m 返回主菜单二次确认：2.5s 内点第二次才真正执行
+  [32m✓[0m 关闭暂停菜单会清掉确认态（不会带着确认态再次打开）
+
+[36m[1m▸ 暂停菜单键盘[0m
+  [32m✓[0m 打开时焦点在「继续游戏」，↓/↑ 循环，Tab 与 Shift+Tab 反向
+  [32m✓[0m Enter 触发当前焦点按钮；被禁用（存档不可用）的按钮不会被触发
+  [32m✓[0m 暂停时游戏热键被吞；ESC 走状态机；面板打开时方向键交给面板
+
+[36m[1m▸ 暂停菜单：单实例接管 & 样式段落[0m
+  [32m✓[0m 第二个 GameUI 实例接管现有的 #pause-menu，不新建第二份，也不双触发
+  [32m✓[0m 音效按钮：静音后 .off / svg 叉号 / 文案切换，再点恢复（回归：曾读不存在的 ui._muted）
+  [32m✓[0m 单例语义：接管挂在别的宿主上的旧卡片（移动而非新建），任何节点都不被删除
+  [32m✓[0m src/ui/style.css 里 PAUSE 段落存在且覆盖关键选择器（防止再被整文件覆盖）
+
+[36m[1m▸ 暂停菜单：弱 DOM 降解[0m
+  [32m✓[0m classList 全是空实现、querySelector 返回新节点：开关/渲染不抛异常
+
+[36m[1m▸ 主循环：暂停时世界完全冻结[0m
+  [32m✓[0m 暂停 3 秒：world.time / 怪物坐标 / 血量 / 冷却 / 子弹 / 粒子逐位不变
+  [32m✓[0m 暂停期间累计的时间不会在恢复后补帧（acc 被清零）
+  [32m✓[0m 固定步长渲染：每帧只推进 1/60 步（暂停不会让固定时间步长变大）
+
+[36m[1m▸ Renderer × Lead world 契约适配[0m
+  [32m✓[0m Lead 字段（aim/torches/r+remaining/displayName/boss）跑 40 帧不崩
+  [32m✓[0m 单帧异常被吞掉且只警告一次（不白屏）
+
+[36m[1m▸ 渲染层回归：真实世界 bug 修复[0m
+  [32m✓[0m 相机：dt=0 时玩家精确落在屏幕中心附近（鼠标偏移有上限）
+  [32m✓[0m 全屏闪烁/飘字不会画出"覆盖整个画布"的实心矩形
+  [32m✓[0m 渐变颜色字符串合法（不能出现 NaN / undefined）
+  [32m✓[0m 怪物尺寸相对玩家合理（普通怪 ≈ 0.9-1.2 身位，Boss ≈ 2 倍）
+
+[36m[1m▸ 投影 project / Camera 世界↔屏幕互逆[0m
+  [32m✓[0m 世界坐标 → 屏幕遵循 2.5D 公式
+  [32m✓[0m project 单调性：z 增加 → 屏幕 y 增加；x 增加 → 屏幕 x 增加
+  [32m✓[0m Camera.worldToScreen / screenToWorld 互逆
+  [32m✓[0m scale = clamp(viewW/34, 22, 40)，resize 后重算
+  [32m✓[0m shake 之后位置有偏移，update(dt) 后衰减
+  [32m✓[0m 相机平滑跟随（lerp），dt=0 时瞬时对齐
+
+[36m[1m▸ ParticleSystem 对象池与上限[0m
+  [32m✓[0m spawn 5000 次后 size <= max
+  [32m✓[0m 生命周期结束的粒子在 update 后被回收
+  [32m✓[0m reset 清空池子；部分回收保留存活粒子
+  [32m✓[0m 粒子随速度移动 / forEach 可遍历
+
+[36m[1m▸ FloatingText 生命周期[0m
+  [32m✓[0m 上限 60，超出覆盖最老的
+  [32m✓[0m update 后到期消失、alpha 渐隐、上升
+  [32m✓[0m 暴击样式更大
+
+[36m[1m▸ ScreenFx 慢动作 / 闪光 / 震动[0m
+  [32m✓[0m 慢动作在时间后恢复 1.0
+  [32m✓[0m 闪光有强度并在 dur 后清除
+  [32m✓[0m shake 请求可被消费清零
+  [32m✓[0m hurt / chroma 随时间衰减
+  [32m✓[0m 技能 id 归一化
+
+[36m[1m▸ EffectField 特效池[0m
+  [32m✓[0m 环/闪电/残影生命周期与池上限
+
+[36m[1m▸ Renderer 无 DOM 环境与 mock canvas 冒烟[0m
+  [32m✓[0m renderer.js 可在 Node 中 import（顶层不访问 document/window）
+  [32m✓[0m new Renderer(null) 不崩溃，render 静默返回
+  [32m✓[0m 完整世界数据在 mock canvas 上跑 30 帧不抛异常
+  [32m✓[0m render 不修改 world（只读契约）
+
+[36m[1m▸ RNG 确定性[0m
+  [32m✓[0m 相同种子产生相同序列
+  [32m✓[0m 不同种子产生不同序列
+  [32m✓[0m next() 在 [0,1)
+  [32m✓[0m 区间分布大致均匀
+  [32m✓[0m int() 返回闭区间整数
+  [32m✓[0m pick / shuffle 不破坏原数组
+  [32m✓[0m weighted 偏好高权重
+  [32m✓[0m hashString 稳定
+
+[36m[1m▸ 战争践踏 stomp（契约 §3.3）[0m
+  [32m✓[0m 技能定义：id/name/icon/manaCost/cooldown/radius/damagePct/armorGain 符合契约
+  [32m✓[0m 圆形范围：范围内的敌人受伤 + 被眩晕，范围外完全不受影响
+  [32m✓[0m 护甲随命中数递增：0 命中也有保底护甲，1/3 命中的护甲按 armorGain 递增
+  [32m✓[0m 护甲 buff 的 id / 名称 / 图标 / 类型正确，并真实进入 player.stats.armor
+  [32m✓[0m 连续施放是「刷新」不是叠层：护甲值不累加、只有 1 个 buff、时长被重置
+  [32m✓[0m 护甲 buff 到期自动移除、护甲属性还原
+  [32m✓[0m 天赋 multiplierBonuses 生效：armorPerEnemyMult / armorFlat 放大护甲
+  [32m✓[0m 通过 tryCast 施放：扣蓝 14、进入 7 秒冷却、推 skillCast(skillId=stomp)
+
+[36m[1m▸ 眩晕（契约 §3.6）[0m
+  [32m✓[0m applyStun：stunTime 生效、推 stun 事件（target.stunTime / stunMax 供渲染）
+  [32m✓[0m 被眩晕的怪物在 updateMonsters 后不再移动、不攻击
+  [32m✓[0m 眩晕结束后怪物恢复追击；stunTime 归零时推 stunEnd
+  [32m✓[0m Boss 眩晕时长被抗性打折（约 40%），普通怪不打折
+  [32m✓[0m 践踏对 Boss 的实际眩晕 = stomp 基础眩晕 × (1-抗性)
+
+[36m[1m▸ 技能等级（契约 §0 / §2.2 / §3.4）[0m
+  [32m✓[0m skillProgression 导出契约要求的常量与函数
+  [32m✓[0m skillLevelFrom：天赋点数 + 精炼等级 − 1（1 起算），封顶 5
+  [32m✓[0m 技能等级 = 天赋节点投入 + 精炼叠加（有效等级），上限 5
+  [32m✓[0m skillDisplayInfo / nextRefineCost / skillCooldownTotal 可在没有 world 时调用
+  [32m✓[0m stats.skillLevelBonus 仍然叠加（契约 §2.1 的兼容语义），且总等级封顶
+
+[36m[1m▸ 分叉天赋与互斥（契约 §3.1 / §3.2）[0m
+  [32m✓[0m skillTree.js 导出新的互斥 API；5 棵树都叫 stomp/whirlwind/warcry/bloodRage/rally
+  [32m✓[0m 每棵树 9~12 个节点、有 branch/group/requires、4 个互斥组
+  [32m✓[0m L1/R1 的前置是 ROOT（契约 §3.2 的拓扑）
+  [32m✓[0m skillEffectsForSkill：无加点时为中性值，multiplierBonuses 默认 1
+  [32m✓[0m skillEffectsForSkill：只认选中的一支（另一支的节点不生效）
+  [32m✓[0m skillNodeConflict：同组已选则返回冲突信息，不同组/未选返回 null
+  [32m✓[0m validateSkillRanks：合法的 ranks 通过，互斥/前置/超档被报出来并给出 fixedRanks
+  [32m✓[0m 短名/全名混写同一节点时取最大值（防止以后回退）
+  [32m✓[0m 5 棵树全部连通：每个节点都能从 ROOT 沿 requires 到达
+  [32m✓[0m skillBranchOf：返回 core/left/right/leftDeep/rightDeep/ultimate
+
+[36m[1m▸ 精炼与重置（契约 §3.4）[0m
+  [32m✓[0m refineCost 花费表：3 / 4 / 6 / 8（不写死浮点，按挡位递增校验）
+  [32m✓[0m canRefineSkill：石头不足 / 满级 都返回 ok=false 且带原因
+  [32m✓[0m refineSkill：扣除精炼石、精炼等级 +1、写回技能实例等级（等级封顶 5）
+  [32m✓[0m respecCost = 2 + 已点节点数；respecSkill 退还技能点并清除该技能节点（保留精炼）
+  [32m✓[0m 同步：syncSkillInstances 把等级/精炼写回技能栏实例
+
+[36m[1m▸ 回归：killEntity 参数顺序（防止误杀玩家）[0m
+  [32m✓[0m killEntity(world, player, monster) 这种"参数写反"的调用不会让玩家暴毙
+
+[36m[1m▸ 技能精炼石掉落与拾取（契约 §3.5）[0m
+  [32m✓[0m 击杀普通怪：world.items 里按 6% 概率出现 kind==="skillOrb" 的掉落
+  [32m✓[0m Boss 必掉精炼石（一次给多颗），精英掉率明显更高
+  [32m✓[0m app 自动拾取：靠近的精炼石进 inv.skillOrbs，并从 world.items 移除（1.6 半径内）
+  [32m✓[0m 自动拾取不需要背包空位（精炼石不占格子）
+
+[36m[1m▸ app 动作：技能升级 / 精炼 / 重置（契约 §4）[0m
+  [32m✓[0m app 导出契约要求的 5 个动作
+  [32m✓[0m doSkillRankUp：点数不足返回 false 且不写数据
+  [32m✓[0m 回归：技能点曲线 = 1 + floor(level / 2)
+  [32m✓[0m doSkillRankUp：前置未点返回 false（L1 需要 ROOT）
+  [32m✓[0m doSkillRankUp：互斥冲突返回 false，且成功加点后技能实例 level 同步
+  [32m✓[0m doSkillRankUp：节点满档、未知技能/节点都返回 false
+  [32m✓[0m doSkillRefine：消耗精炼石、余额不足返回 false、技能等级提升
+  [32m✓[0m doSkillRespec：退还技能点、清除该技能节点、保留精炼，并推 skillRespec 事件
+  [32m✓[0m syncSkillSystems：player.skillMods / skills / 实例等级三处一致
+  [32m✓[0m headless 跑 60 帧不崩，技能点/精炼石数据保持有限数
+
+[36m[1m▸ UI 技能面板与提醒（契约 §5）[0m
+  [32m✓[0m 技能面板渲染 5 个技能标签（stomp 在第一个）
+  [32m✓[0m 技能面板有「精炼」与「重置天赋」按钮，且精炼按钮显示花费
+  [32m✓[0m 精炼格子 4 个、等级显示、技能点/精炼石在底部栏
+  [32m✓[0m 互斥锁定态：点了左支后右支节点带 locked 样式 + 原因
+  [32m✓[0m ui.onEvents 处理 skillRankUp / skillRefine / skillOrbGain 不抛异常且有日志
+  [32m✓[0m HUD 技能栏光点角标：有可用技能点 / 可精炼时出现
+  [32m✓[0m 点击「精炼」按钮 → app.doSkillRefine 真跑：扣精炼石、精炼 +1、等级 +1、面板重绘
+  [32m✓[0m 点击「精炼」按钮但石头不足 → 不扣款、等级不变（只有点击时的错因日志）
+  [32m✓[0m 点击「重置天赋」按钮 → 技能点退回、节点清空、精炼保留
+  [32m✓[0m 点击天赋树里的节点 → 真的加点（UI → app.doSkillRankUp 闭环）
+  [32m✓[0m 新手引导：首次打开技能面板显示引导条（localStorage 取不到时按首次处理）
+
+[36m[1m▸ 渲染：战争践踏/眩晕/升星事件（契约 §6）[0m
+[Renderer] 单个实体绘制异常（已跳过）: non-finite coord in call
+  [32m✓[0m world.emit({type:"stomp"}) 后 render 不抛异常，且确实产生了视觉对象
+[Renderer] 单个实体绘制异常（已跳过）: non-finite coord in call
+  [32m✓[0m world.events 里同时有 stomp + stun + stunEnd + skillRankUp 时跑 20 帧不崩
+[Renderer] 单个实体绘制异常（已跳过）: non-finite coord in call
+  [32m✓[0m 眩晕中的怪物头顶画标记（stunTime > 0）不会崩；结算后也没残留
+[Renderer] 单个实体绘制异常（已跳过）: non-finite coord in call
+  [32m✓[0m 玩家身上的踏地战甲（warStompArmor buff）会画护甲辉光，不崩
+[Renderer] 单个实体绘制异常（已跳过）: non-finite coord in call
+  [32m✓[0m knockback/坐标异常也能隔离：stomp 事件缺字段不崩
+
+[36m[1m▸ 属性面板（纯逻辑：来源拆解）[0m
+  [32m✓[0m 加载模块 + 真实 createGame()
+  [32m✓[0m 新角色：6 个属性的拆解之和 == 总值（±1e-6）
+  [32m✓[0m 点天赋 / 装备 / 增益后：拆解仍然恒等，且来源来自真实数据
+  [32m✓[0m 上限截断 / 默认值兜底会体现在「差值」而不是丢失
+  [32m✓[0m 有默认值的属性（暴击率）在其它层"没有贡献"时标注来源不全
+
+[36m[1m▸ 属性面板（DOM 桩）[0m
+  [32m✓[0m 安装桩 + 打开面板
+  [32m✓[0m 标题 / 底部按钮 / 六个分区都在
+  [32m✓[0m 关键属性文本存在（生命当前/最大、攻速、暴击、抗性百分比）
+  [32m✓[0m 点击属性行展开来源拆解，再点收起
+  [32m✓[0m 抗性 ≥ 上限显示金色，负数显示红色
+  [32m✓[0m 已装备：10 个槽位，稀有度着色，悬停出完整 tooltip
+  [32m✓[0m 资源分区：天赋点 / 技能点 / 精炼石 / 金币
+  [32m✓[0m 数据缺失也不能抛异常（降级路径）
+  [32m✓[0m 最小化 EL 桩（appendChild/querySelector 都是假值）也不崩
+  [32m✓[0m 恢复全局 DOM 桩（不影响其他测试套件）
+
+[36m[1m▸ UI 层（DOM 桩）[0m
+  [32m✓[0m 安装 DOM 桩并加载模块
+  [32m✓[0m HUD 每帧更新不抛异常，血条/蓝条宽度正确
+  [32m✓[0m 事件流：击杀连击/升级横幅/掉落提示
+  [32m✓[0m 地图信息渲染
+  [32m✓[0m 背包界面：渲染格子并可装备
+  [32m✓[0m 天赋树界面可以打开并渲染节点
+  [32m✓[0m 技能树界面可以打开并渲染节点
+  [32m✓[0m 死亡界面与复活
+  [32m✓[0m FPS 显示与日志
+
+[36m[1m▸ 可见性 / 移动回归[0m
+  [32m✓[0m world.all 始终包含玩家（含换图后）
+  [32m✓[0m 按住方向键 + 攻击：存活期间不出现 >0.5s 的原地不动
+  [32m✓[0m 压墙时 unstickPlayer 会把实体推到合法位置
+  [32m✓[0m 换图后刷怪器重置，新地图会持续刷怪
+  [32m✓[0m 复活后可以正常移动，且角色站在可走位置
+
+[36m[1m▸ 旋风斩：停止后不残留[0m
+  [32m✓[0m 松开后 0.15 秒内刀光完全消失
+  [32m✓[0m 松开后旋涡角度冻结（不再旋转）
+  [32m✓[0m whirl 持续事件不会给渲染层"续命"
+
+[36m[1m▸ 旋风斩视觉[0m
+  [32m✓[0m 按住旋风斩时玩家进入 whirlwind 状态（不反复重置为 attack）
+  [32m✓[0m 松开后旋风状态结束
+  [32m✓[0m 渲染层在旋风期间会画出刀光（且不会崩）
+  [32m✓[0m 旋风期间粒子数量不会爆掉（避免白色粉尘把角色糊住）
+  [32m✓[0m drawWhirlBlades 不再整圈/整面填白（防止把角色糊成白盘）
+
+[1m[32m共 379 项测试，通过 379，失败 0（6.34s）[0m

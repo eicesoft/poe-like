@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <title>POE-like · 魂火远征</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="./src/ui/style.css" />
+</head>
+<body>
+  <div id="app">
+    <canvas id="game"></canvas>
+
+    <!-- ===== HUD ===== -->
+    <div id="hud" class="hidden">
+      <div id="topbar">
+        <div id="map-info" class="hud-card">
+          <div id="map-name">众星教堂遗迹</div>
+          <div id="map-mods"></div>
+          <div id="map-progress"><span id="kill-count">0</span> 击杀 · <span id="wave-count">0</span> 波</div>
+        </div>
+        <!-- 人物属性信息面板：等级 / 经验 / 战斗数值（原左上角角色卡已合并到这里） -->
+        <div id="stats-panel" class="hud-card">
+          <div id="char-summary">
+            <div class="avatar" id="avatar">战</div>
+            <div class="char-info">
+              <div class="row1"><span id="char-name">无名战士</span><span id="char-level">Lv.1</span></div>
+              <div class="bar xp"><i id="bar-xp"></i><b id="txt-xp">0%</b></div>
+            </div>
+          </div>
+          <div id="stats-rows"></div>
+        </div>
+      </div>
+
+      <!-- 法师自动循环状态（战士隐藏） -->
+      <div id="mage-status" class="hidden">
+        <div class="ms-top">
+          <span class="ms-auto">自动施法</span>
+          <span id="mage-auto-state">等待目标</span>
+        </div>
+        <div class="ms-res" title="共鸣：元素反应与强化循环技获得；满 100 后按 T 开启元素狂潮">
+          <i id="mage-res-fill"></i>
+          <span id="mage-res-text">共鸣 0 / 100</span>
+        </div>
+        <div class="ms-bottom">
+          <div id="mage-presets" class="ms-presets">
+            <button type="button" data-preset="balanced" class="active">均衡</button>
+            <button type="button" data-preset="reaction">反应流</button>
+            <button type="button" data-preset="accumulate">蓄积流</button>
+          </div>
+          <span class="ms-hint">左键锁定 · T 大招</span>
+        </div>
+      </div>
+
+      <!-- 底部行动栏：生命球 · 技能栏 · 法力球 -->
+      <div id="action-bar">
+        <div class="orb hp" id="orb-hp" title="生命">
+          <svg class="orb-svg" viewBox="0 0 100 100" aria-hidden="true" focusable="false">
+            <defs>
+              <linearGradient id="orb-hp-grad" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#ffb08a" />
+                <stop offset="42%" stop-color="#ff5a3c" />
+                <stop offset="100%" stop-color="#9c1408" />
+              </linearGradient>
+            </defs>
+            <circle class="orb-track" cx="50" cy="50" r="44" />
+            <circle class="orb-fill" id="bar-hp" cx="50" cy="50" r="44" pathLength="100" />
+          </svg>
+          <div class="orb-core">
+            <span class="orb-label">生命</span>
+            <b id="txt-hp">100/100</b>
+          </div>
+        </div>
+
+        <div id="skillbar">
+          <div class="slot" data-idx="0"><div class="key">Q</div><div class="glyph"></div><div class="cd"></div><div class="cdtxt"></div></div>
+          <div class="slot" data-idx="1"><div class="key">W</div><div class="glyph"></div><div class="cd"></div><div class="cdtxt"></div></div>
+          <div class="slot" data-idx="2"><div class="key">E</div><div class="glyph"></div><div class="cd"></div><div class="cdtxt"></div></div>
+          <div class="slot" data-idx="3"><div class="key">R</div><div class="glyph"></div><div class="cd"></div><div class="cdtxt"></div></div>
+          <div class="slot" data-idx="4"><div class="key">T</div><div class="glyph"></div><div class="cd"></div><div class="cdtxt"></div></div>
+          <div class="slot dash" data-idx="5"><div class="key">空格</div><div class="glyph"></div><div class="cd"></div><div class="cdtxt"></div></div>
+          <div class="slot recall" data-idx="6"><div class="key">🏕</div><div class="glyph"></div><div class="cd"></div><div class="cdtxt"></div></div>
+        </div>
+
+        <div class="orb mp" id="orb-mp" title="法力">
+          <svg class="orb-svg" viewBox="0 0 100 100" aria-hidden="true" focusable="false">
+            <defs>
+              <linearGradient id="orb-mp-grad" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#bfe1ff" />
+                <stop offset="45%" stop-color="#4f8dff" />
+                <stop offset="100%" stop-color="#12306e" />
+              </linearGradient>
+            </defs>
+            <circle class="orb-track" cx="50" cy="50" r="44" />
+            <circle class="orb-fill" id="bar-mp" cx="50" cy="50" r="44" pathLength="100" />
+          </svg>
+          <div class="orb-core">
+            <span class="orb-label">法力</span>
+            <b id="txt-mp">50/50</b>
+          </div>
+        </div>
+      </div>
+
+      <div id="log"></div>
+      <div id="combo" class="hidden"></div>
+      <div id="loot-bar">
+        <span class="lb-title">掉落</span>
+        <span id="loot-items"></span>
+      </div>
+      <div id="help-hint">方向键 移动 · <b>Q W E R T</b> 技能 · 左键 普攻 · 空格 翻滚 · F 拾取 · I 背包 · K/Tab 技能天赋 · P 天赋 · <b>C 属性</b> · <b>ESC 暂停</b> · M 静音</div>
+    </div>
+
+    <!-- ===== 浮层提示 ===== -->
+    <div id="tooltip" class="hidden"></div>
+    <div id="banner" class="hidden"><div class="banner-text"></div></div>
+    <div id="damage-layer"></div>
+
+    <!-- ===== 弹窗 ===== -->
+    <div id="modal" class="hidden">
+      <div class="modal-panel">
+        <div class="modal-head"><h2 id="modal-title">背包</h2><button id="modal-close">✕</button></div>
+        <div class="modal-body" id="modal-body"></div>
+        <div class="modal-foot" id="modal-foot"></div>
+      </div>
+    </div>
+
+    <!-- ===== 开始界面 ===== -->
+    <div id="start-screen">
+      <div class="start-bg"></div>
+      <div class="start-content">
+        <h1 class="logo">魂火远征<span class="sub">EXILE OF EMBERS</span></h1>
+        <p class="tagline">神庙深处的裂隙不断涌出亡魂。作为最后的流亡者，你要一层层征服它们——用技能与天赋把自己锻成一台杀戮机器。</p>
+        <div class="class-select">
+          <button type="button" class="class-card selected" data-class="warrior" aria-pressed="true">
+            <div class="class-icon">战</div>
+            <div class="class-desc">
+              <h2>战士 · 战神之子</h2>
+              <p>近战爆发，兼顾生存。靠近身技能与控制把亡魂砸碎。</p>
+              <ul>
+                <li>初始技能：<b>战争践踏</b>、<b>旋风斩</b>、<b>战吼</b>、<b>血性狂暴</b>、<b>坚毅图腾</b></li>
+                <li>左键普攻 · QWERT 技能 · 空格翻滚 · 全手动操作</li>
+                <li>每个技能都有左右分叉天赋，升级与战斗获得技能点</li>
+              </ul>
+              <span class="class-pick">选择战士</span>
+            </div>
+          </button>
+
+          <button type="button" class="class-card mage" data-class="mage" aria-pressed="false">
+            <div class="class-icon">法</div>
+            <div class="class-desc">
+              <h2>元素法师 · 半自动</h2>
+              <p>火、冰、雷三系自动轮转，印记与元素反应由循环处理。</p>
+              <ul>
+                <li>自动施法：<b>灼热飞弹</b>、<b>寒冰箭</b>、<b>电弧</b>、<b>炎爆术</b></li>
+                <li>你负责走位、<b>左键锁定</b>目标与 <b>T 元素狂潮</b>的时机</li>
+                <li>冰霜屏障自动护盾 · 霜环/雷链由循环触发 · 空格闪现</li>
+              </ul>
+              <span class="class-pick">选择元素法师</span>
+            </div>
+          </button>
+        </div>
+        <button id="btn-start" class="btn-primary">以战士进入神庙</button>
+        <div id="profile-info"></div>
+      </div>
+    </div>
+
+    <!-- ===== 加载 ===== -->
+    <div id="loading" class="hidden"><div class="spinner"></div><div class="load-text">生成地图中…</div></div>
+  </div>
+  <script type="module" src="./src/ui/main.js"></script>
+</body>
+</html>

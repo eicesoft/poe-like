@@ -1,0 +1,19 @@
+✓ ① ESC 打开暂停：game.paused=true 且暂停菜单 .show  → ESC→paused
+✓ ② 暂停中打开 stats：面板打开且仍暂停  → modalOpen=stats 子节点=1
+✓ ③ 暂停中再按 ESC：先关 stats，仍暂停  → ESC→panel
+✓ ② 暂停中打开 talents：面板打开且仍暂停  → modalOpen=talents 子节点=1
+✓ ③ 暂停中再按 ESC：先关 talents，仍暂停  → ESC→panel
+✓ ② 暂停中打开 skills：面板打开且仍暂停  → modalOpen=skills 子节点=1
+✓ ③ 暂停中再按 ESC：先关 skills，仍暂停  → ESC→panel
+✓ ② 暂停中打开 inventory：面板打开且仍暂停  → modalOpen=inventory 子节点=1
+✓ ③ 暂停中再按 ESC：先关 inventory，仍暂停  → ESC→panel
+✓ ④ 暂停中 ESC 恢复游戏  → ESC→resumed
+✓ ⑤ 底部按钮列存在且有 4 个带 icon 的按钮  → data-act=stats,talents,skills,equipment
+✓ ⑤ 点击底部「stats」按钮 → 打开 → 再点关闭  → ok
+✓ ⑤ 点击底部「talents」按钮 → 打开 → 再点关闭  → ok
+✓ ⑤ 点击底部「skills」按钮 → 打开 → 再点关闭  → ok
+✓ ⑤ 点击底部「equipment」按钮 → 打开 → 再点关闭  → ok
+✓ ⑥ 暂停 3 秒：world.time/怪物坐标/冷却逐位不变  → world.time 保持 1.000，怪物 2 只逐位一致
+✓ ⑦ 重复构造 GameUI 不会产生第二个 #panel-bar / #pause-menu  → #panel-bar=1 #pause-menu=1
+
+共 17 项，通过 17，失败 0

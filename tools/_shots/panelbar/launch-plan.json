@@ -1,0 +1,55 @@
+{
+  "note": "本进程不 spawn 子进程；请用下面的 args 在外部启动浏览器",
+  "port": 9339,
+  "profile": "C:\\Users\\Kele\\AppData\\Local\\Temp\\dsh-nbL1Mi\\poe-qa-chrome",
+  "candidates": [
+    {
+      "kind": "chrome-cli",
+      "exe": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+      "exists": true,
+      "args": [
+        "--headless=new",
+        "--no-sandbox",
+        "--no-first-run",
+        "--no-default-browser-check",
+        "--disable-crash-reporter",
+        "--disable-breakpad",
+        "--disable-background-networking",
+        "--disable-sync",
+        "--disable-extensions",
+        "--mute-audio",
+        "--hide-scrollbars",
+        "--force-device-scale-factor=1",
+        "--window-size=1280,720",
+        "--user-data-dir=C:\\Users\\Kele\\AppData\\Local\\Temp\\dsh-nbL1Mi\\poe-qa-chrome",
+        "--remote-debugging-port=9339",
+        "--remote-allow-origins=*",
+        "about:blank"
+      ]
+    },
+    {
+      "kind": "edge-cli",
+      "exe": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+      "exists": true,
+      "args": [
+        "--headless=new",
+        "--no-sandbox",
+        "--no-first-run",
+        "--no-default-browser-check",
+        "--disable-crash-reporter",
+        "--disable-breakpad",
+        "--disable-background-networking",
+        "--disable-sync",
+        "--disable-extensions",
+        "--mute-audio",
+        "--hide-scrollbars",
+        "--force-device-scale-factor=1",
+        "--window-size=1280,720",
+        "--user-data-dir=C:\\Users\\Kele\\AppData\\Local\\Temp\\dsh-nbL1Mi\\poe-qa-chrome",
+        "--remote-debugging-port=9339",
+        "--remote-allow-origins=*",
+        "about:blank"
+      ]
+    }
+  ]
+}

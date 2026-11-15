@@ -1,0 +1,770 @@
+{
+  "ok": true,
+  "config": {
+    "minutes": 10,
+    "seed": 42,
+    "tier": 1,
+    "bot": "skilled"
+  },
+  "errors": [],
+  "warnings": [],
+  "nanIssues": {},
+  "capBreaches": {},
+  "memory": {
+    "peak": {
+      "monsters": 16,
+      "projectiles": 1,
+      "all": 18,
+      "items": 6,
+      "lootOrbs": 4,
+      "events": 0,
+      "particles": 0,
+      "groundEffects": 0,
+      "summoned": 1
+    },
+    "caps": {
+      "monsters": 400,
+      "projectiles": 800,
+      "all": 900,
+      "lootOrbs": 1200,
+      "items": 400,
+      "groundEffects": 200,
+      "summoned": 20
+    },
+    "memCaps": {
+      "events": 2000,
+      "particles": 2000,
+      "msgs": 200
+    },
+    "eventsAtEnd": 0,
+    "particlesAtEnd": 0,
+    "toastLogLen": 105,
+    "maxParticlesSeen": 0
+  },
+  "timeline": [
+    {
+      "minute": 1,
+      "tSec": 60,
+      "periodSec": 60,
+      "tier": 1,
+      "level": 3,
+      "maxHp": 260,
+      "killsTotal": 42,
+      "killsDelta": 42,
+      "pickupsTotal": 3,
+      "dropsDelta": 3,
+      "deaths": 0,
+      "gold": 113,
+      "dpsAvg": 30.3,
+      "dmgTaken": 126,
+      "equipped": 3,
+      "talents": 3,
+      "bag": 0,
+      "aliveMonsters": 4
+    },
+    {
+      "minute": 2,
+      "tSec": 120,
+      "periodSec": 60,
+      "tier": 1,
+      "level": 4,
+      "maxHp": 463,
+      "killsTotal": 82,
+      "killsDelta": 40,
+      "pickupsTotal": 5,
+      "dropsDelta": 2,
+      "deaths": 0,
+      "gold": 212,
+      "dpsAvg": 29.2,
+      "dmgTaken": 199,
+      "equipped": 5,
+      "talents": 4,
+      "bag": 6,
+      "aliveMonsters": 8
+    },
+    {
+      "minute": 3,
+      "tSec": 180,
+      "periodSec": 60,
+      "tier": 1,
+      "level": 5,
+      "maxHp": 551,
+      "killsTotal": 124,
+      "killsDelta": 42,
+      "pickupsTotal": 9,
+      "dropsDelta": 4,
+      "deaths": 0,
+      "gold": 316,
+      "dpsAvg": 29.8,
+      "dmgTaken": 249,
+      "equipped": 8,
+      "talents": 5,
+      "bag": 9,
+      "aliveMonsters": 6
+    },
+    {
+      "minute": 4,
+      "tSec": 240,
+      "periodSec": 60,
+      "tier": 1,
+      "level": 6,
+      "maxHp": 685,
+      "killsTotal": 175,
+      "killsDelta": 51,
+      "pickupsTotal": 16,
+      "dropsDelta": 7,
+      "deaths": 0,
+      "gold": 462,
+      "dpsAvg": 35.3,
+      "dmgTaken": 289,
+      "equipped": 10,
+      "talents": 6,
+      "bag": 18,
+      "aliveMonsters": 6
+    },
+    {
+      "minute": 5,
+      "tSec": 300,
+      "periodSec": 60,
+      "tier": 1,
+      "level": 7,
+      "maxHp": 933,
+      "killsTotal": 229,
+      "killsDelta": 54,
+      "pickupsTotal": 22,
+      "dropsDelta": 6,
+      "deaths": 0,
+      "gold": 579,
+      "dpsAvg": 37.6,
+      "dmgTaken": 301,
+      "equipped": 12,
+      "talents": 7,
+      "bag": 26,
+      "aliveMonsters": 5
+    },
+    {
+      "minute": 6,
+      "tSec": 360,
+      "periodSec": 60,
+      "tier": 2,
+      "level": 8,
+      "maxHp": 1037,
+      "killsTotal": 279,
+      "killsDelta": 50,
+      "pickupsTotal": 26,
+      "dropsDelta": 4,
+      "deaths": 0,
+      "gold": 772,
+      "dpsAvg": 62.5,
+      "dmgTaken": 462,
+      "equipped": 12,
+      "talents": 8,
+      "bag": 11,
+      "aliveMonsters": 4
+    },
+    {
+      "minute": 7,
+      "tSec": 420,
+      "periodSec": 60,
+      "tier": 2,
+      "level": 8,
+      "maxHp": 1037,
+      "killsTotal": 330,
+      "killsDelta": 51,
+      "pickupsTotal": 34,
+      "dropsDelta": 8,
+      "deaths": 0,
+      "gold": 1012,
+      "dpsAvg": 86.3,
+      "dmgTaken": 550,
+      "equipped": 12,
+      "talents": 8,
+      "bag": 19,
+      "aliveMonsters": 5
+    },
+    {
+      "minute": 8,
+      "tSec": 480,
+      "periodSec": 60,
+      "tier": 2,
+      "level": 9,
+      "maxHp": 1129,
+      "killsTotal": 380,
+      "killsDelta": 50,
+      "pickupsTotal": 35,
+      "dropsDelta": 1,
+      "deaths": 0,
+      "gold": 1213,
+      "dpsAvg": 103.8,
+      "dmgTaken": 642,
+      "equipped": 13,
+      "talents": 9,
+      "bag": 23,
+      "aliveMonsters": 6
+    },
+    {
+      "minute": 9,
+      "tSec": 540,
+      "periodSec": 60,
+      "tier": 3,
+      "level": 10,
+      "maxHp": 1221,
+      "killsTotal": 423,
+      "killsDelta": 43,
+      "pickupsTotal": 38,
+      "dropsDelta": 3,
+      "deaths": 0,
+      "gold": 1393,
+      "dpsAvg": 114.8,
+      "dmgTaken": 796,
+      "equipped": 13,
+      "talents": 10,
+      "bag": 28,
+      "aliveMonsters": 5
+    },
+    {
+      "minute": 10,
+      "tSec": 600,
+      "periodSec": 60,
+      "tier": 3,
+      "level": 10,
+      "maxHp": 1221,
+      "killsTotal": 473,
+      "killsDelta": 50,
+      "pickupsTotal": 41,
+      "dropsDelta": 3,
+      "deaths": 0,
+      "gold": 1658,
+      "dpsAvg": 125.6,
+      "dmgTaken": 950,
+      "equipped": 13,
+      "talents": 10,
+      "bag": 37,
+      "aliveMonsters": 7
+    }
+  ],
+  "skills": {
+    "orbs": {
+      "gained": 28,
+      "gainedByEvent": 28,
+      "gainedByDiff": 28,
+      "gainEvents": 26,
+      "spent": 27,
+      "spentOnRefine": 27,
+      "spentOnRespec": 0,
+      "left": 1,
+      "reserve": 2
+    },
+    "refines": 8,
+    "refineAttempts": 8,
+    "respecs": 0,
+    "forkConflicts": 1,
+    "blockedNodes": {
+      "stomp.r1": 1
+    },
+    "ranks": {
+      "stomp.root": 3,
+      "stomp.l1": 1,
+      "stomp.l2": 1
+    },
+    "skillPointsTotal": 0,
+    "levels": [
+      {
+        "id": "stomp",
+        "name": "战争践踏",
+        "level": 5,
+        "levelRanks": 5,
+        "refine": 2,
+        "talentPoints": 5,
+        "talentNodes": 3
+      },
+      {
+        "id": "whirlwind",
+        "name": "旋风斩",
+        "level": 5,
+        "levelRanks": 3,
+        "refine": 2,
+        "talentPoints": 0,
+        "talentNodes": 0
+      },
+      {
+        "id": "warcry",
+        "name": "战吼",
+        "level": 5,
+        "levelRanks": 2,
+        "refine": 1,
+        "talentPoints": 0,
+        "talentNodes": 0
+      },
+      {
+        "id": "bloodRage",
+        "name": "血性狂暴",
+        "level": 5,
+        "levelRanks": 2,
+        "refine": 1,
+        "talentPoints": 0,
+        "talentNodes": 0
+      },
+      {
+        "id": "rally",
+        "name": "坚毅图腾",
+        "level": 5,
+        "levelRanks": 3,
+        "refine": 2,
+        "talentPoints": 0,
+        "talentNodes": 0
+      }
+    ],
+    "forks": [
+      {
+        "id": "stomp",
+        "name": "战争践踏",
+        "focus": "left"
+      },
+      {
+        "id": "whirlwind",
+        "name": "旋风斩",
+        "focus": ""
+      },
+      {
+        "id": "warcry",
+        "name": "战吼",
+        "focus": ""
+      },
+      {
+        "id": "bloodRage",
+        "name": "血性狂暴",
+        "focus": ""
+      },
+      {
+        "id": "rally",
+        "name": "坚毅图腾",
+        "focus": ""
+      }
+    ],
+    "branchPoints": 2,
+    "rows": [
+      {
+        "id": "stomp",
+        "name": "战争践踏",
+        "level": 5,
+        "levelRanks": 5,
+        "refine": 2,
+        "talentPoints": 5,
+        "talentNodes": 3,
+        "focus": "left",
+        "casts": 93,
+        "canRefine": false,
+        "nextCost": null,
+        "reason": "技能等级已满"
+      },
+      {
+        "id": "whirlwind",
+        "name": "旋风斩",
+        "level": 5,
+        "levelRanks": 3,
+        "refine": 2,
+        "talentPoints": 0,
+        "talentNodes": 0,
+        "focus": "",
+        "casts": 437,
+        "canRefine": false,
+        "nextCost": 6,
+        "reason": "精炼石不足（需要 6，拥有 1）"
+      },
+      {
+        "id": "warcry",
+        "name": "战吼",
+        "level": 5,
+        "levelRanks": 2,
+        "refine": 1,
+        "talentPoints": 0,
+        "talentNodes": 0,
+        "focus": "",
+        "casts": 26,
+        "canRefine": false,
+        "nextCost": 4,
+        "reason": "精炼石不足（需要 4，拥有 1）"
+      },
+      {
+        "id": "bloodRage",
+        "name": "血性狂暴",
+        "level": 5,
+        "levelRanks": 2,
+        "refine": 1,
+        "talentPoints": 0,
+        "talentNodes": 0,
+        "focus": "",
+        "casts": 15,
+        "canRefine": false,
+        "nextCost": 4,
+        "reason": "精炼石不足（需要 4，拥有 1）"
+      },
+      {
+        "id": "rally",
+        "name": "坚毅图腾",
+        "level": 5,
+        "levelRanks": 3,
+        "refine": 2,
+        "talentPoints": 0,
+        "talentNodes": 0,
+        "focus": "",
+        "casts": 124,
+        "canRefine": false,
+        "nextCost": 6,
+        "reason": "精炼石不足（需要 6，拥有 1）"
+      }
+    ],
+    "modules": {
+      "skillProgression": true,
+      "doSkillRefine": true,
+      "doSkillRespec": true,
+      "skillPointsTotal": true,
+      "syncSkillSystems": true,
+      "warnings": []
+    },
+    "casts": {
+      "bloodRage": 15,
+      "rally": 124,
+      "stomp": 93,
+      "whirlwind": 437,
+      "warcry": 26
+    }
+  },
+  "stomp": {
+    "casts": 93,
+    "hits": 106,
+    "avgHits": 1.14,
+    "zeroHitCasts": 5,
+    "stuns": 33,
+    "stunEnds": 1,
+    "stunSeconds": 55.1,
+    "armorBuffCoveragePct": 69.8,
+    "armorMax": 33,
+    "lastArmor": 28,
+    "lastArmorRemaining": 2.8
+  },
+  "player": {
+    "level": 10,
+    "finalLevel": 10,
+    "startLevel": 1,
+    "xp": 1268,
+    "maxHp": 1221,
+    "maxMp": 196,
+    "stats": {
+      "dmgMin": 40,
+      "dmgMax": 68,
+      "aps": 2.19,
+      "crit": 0.392,
+      "critMulti": 5,
+      "armor": 528,
+      "evasion": 0.09,
+      "moveSpeed": 7.24,
+      "cdr": 0,
+      "aoe": 0,
+      "damageMult": 0,
+      "lifeLeech": 0,
+      "resists": {
+        "fire": 0,
+        "cold": 0.388,
+        "lightning": 0.396,
+        "chaos": 0
+      }
+    },
+    "gold": 1658,
+    "bagGold": 572,
+    "talentsTaken": 9,
+    "talentPointsLeft": 0,
+    "skillRanks": 5,
+    "equipped": {
+      "helmet": {
+        "name": "斩魂之怒的便帽",
+        "rarity": "rare",
+        "slot": "helmet",
+        "score": 44
+      },
+      "amulet": {
+        "name": "残暴之魂的骨制项链之雷",
+        "rarity": "magic",
+        "slot": "amulet",
+        "score": 27
+      },
+      "body": {
+        "name": "巨人般的破旧外衣之影",
+        "rarity": "magic",
+        "slot": "body",
+        "score": 18
+      },
+      "weapon": {
+        "name": "终末之泣的短剑",
+        "rarity": "rare",
+        "slot": "weapon",
+        "score": 128
+      },
+      "offhand": {
+        "name": "锈蚀短斧之生机",
+        "rarity": "magic",
+        "slot": "weapon",
+        "score": 110
+      },
+      "gloves": {
+        "name": "斩魂之息的手套",
+        "rarity": "rare",
+        "slot": "gloves",
+        "score": 27
+      },
+      "belt": {
+        "name": "精髓的皮革腰带",
+        "rarity": "magic",
+        "slot": "belt",
+        "score": 12
+      },
+      "ring1": {
+        "name": "战狂的铁质戒指",
+        "rarity": "magic",
+        "slot": "ring",
+        "score": 10
+      },
+      "ring2": {
+        "name": "深渊之怒的戒指",
+        "rarity": "rare",
+        "slot": "ring",
+        "score": 27
+      },
+      "boots": {
+        "name": "斩魂之契的皮靴",
+        "rarity": "rare",
+        "slot": "boots",
+        "score": 43
+      }
+    }
+  },
+  "progress": {
+    "kills": 473,
+    "killsPerMin": 47.3,
+    "killsByRarity": {
+      "normal": 470,
+      "magic": 0,
+      "rare": 2,
+      "boss": 1
+    },
+    "deaths": 0,
+    "revives": 0,
+    "travels": 2,
+    "highestTier": 3,
+    "currentTier": 3,
+    "mapsCleared": 2,
+    "levelCurve": [
+      {
+        "minute": 1,
+        "level": 3,
+        "tier": 1,
+        "maxHp": 260
+      },
+      {
+        "minute": 2,
+        "level": 4,
+        "tier": 1,
+        "maxHp": 463
+      },
+      {
+        "minute": 3,
+        "level": 5,
+        "tier": 1,
+        "maxHp": 551
+      },
+      {
+        "minute": 4,
+        "level": 6,
+        "tier": 1,
+        "maxHp": 685
+      },
+      {
+        "minute": 5,
+        "level": 7,
+        "tier": 1,
+        "maxHp": 933
+      },
+      {
+        "minute": 6,
+        "level": 8,
+        "tier": 2,
+        "maxHp": 1037
+      },
+      {
+        "minute": 7,
+        "level": 8,
+        "tier": 2,
+        "maxHp": 1037
+      },
+      {
+        "minute": 8,
+        "level": 9,
+        "tier": 2,
+        "maxHp": 1129
+      },
+      {
+        "minute": 9,
+        "level": 10,
+        "tier": 3,
+        "maxHp": 1221
+      },
+      {
+        "minute": 10,
+        "level": 10,
+        "tier": 3,
+        "maxHp": 1221
+      }
+    ],
+    "levelPerMin": 0.9,
+    "playTimeSec": 600
+  },
+  "layerStats": {
+    "layers": [
+      {
+        "layer": 1,
+        "sec": 300,
+        "kills": 229,
+        "drops": 28,
+        "level": 7,
+        "killsTotal": 229,
+        "dropsTotal": 28,
+        "mapsCleared": 0
+      },
+      {
+        "layer": 2,
+        "sec": 222,
+        "kills": 184,
+        "drops": 24,
+        "level": 10,
+        "killsTotal": 413,
+        "dropsTotal": 52,
+        "mapsCleared": 1
+      }
+    ],
+    "avgSecPerLayer": 261,
+    "avgKillsPerLayer": 206.5
+  },
+  "boss": {
+    "encounters": 2,
+    "kills": 1,
+    "lastTTK": 1.35,
+    "battle": {
+      "level": 2,
+      "maxHp": 829,
+      "playerLevel": 5,
+      "ttk": 1,
+      "killed": true,
+      "playerDied": false,
+      "playerHpMinPct": 42,
+      "hpTracePct": [
+        52,
+        100
+      ]
+    }
+  },
+  "survival": {
+    "avgHpPct": 53.2,
+    "lowHpPct": 10.7,
+    "critHpPct": 0,
+    "damageTakenPerMin": 95,
+    "healedPerMin": 228.8,
+    "healRatio": 2.41,
+    "deaths": 0,
+    "deathsPerMin": 0,
+    "timeToFirstDeathSec": null
+  },
+  "combat": {
+    "dps": {
+      "byDamageEvents": 125.6,
+      "theoretical": 141.7,
+      "takenPerSec": 1.6,
+      "totalDealt": 75331,
+      "totalTaken": 950
+    },
+    "hits": 1071,
+    "hitsPerSec": 1.79,
+    "avgHit": 70.3,
+    "swings": 617
+  },
+  "loot": {
+    "dropped": 60,
+    "dropsPerMin": 6,
+    "byRarity": {
+      "normal": 1,
+      "magic": 49,
+      "rare": 10,
+      "legendary": 0
+    },
+    "per100Kills": 12.7,
+    "pickups": 60,
+    "perMin": 6,
+    "pickedByRarity": {
+      "normal": 1,
+      "magic": 30,
+      "rare": 10,
+      "legendary": 0
+    },
+    "equippedChanges": 13,
+    "sellAllCalls": 0,
+    "goldFromSell": 560,
+    "bagRarityAtEnd": {
+      "normal": 1,
+      "magic": 31,
+      "rare": 5,
+      "legendary": 0
+    },
+    "equippedRarity": {
+      "normal": 0,
+      "magic": 5,
+      "rare": 5,
+      "legendary": 0
+    },
+    "lostDrops": 2
+  },
+  "wall": {
+    "simulatedSec": 600,
+    "wallSec": 1.12,
+    "cpuMs": 1118,
+    "realtimeFactor": 537.2,
+    "stepsRun": 36000,
+    "msPerSimSecond": 1.86,
+    "slowSeconds": 0
+  },
+  "balance": {
+    "checks": [
+      {
+        "name": "10 分钟等级",
+        "target": "8-15 级",
+        "actual": "10 级",
+        "pass": true
+      },
+      {
+        "name": "10 分钟到达层数",
+        "target": "3-6 层",
+        "actual": "3 层",
+        "pass": true
+      },
+      {
+        "name": "掉落速率",
+        "target": "5-15 件/分钟",
+        "actual": "6 件/分钟",
+        "pass": true
+      },
+      {
+        "name": "传奇（10 分钟）",
+        "target": "≤1 件",
+        "actual": "0 件",
+        "pass": true
+      }
+    ],
+    "verdict": "全部达标",
+    "dungeonStats": {
+      "dpsByDamageEvents": 125.6,
+      "theoreticalDps": 141.7,
+      "takenPerSec": 1.6,
+      "equipSlots": 10,
+      "levelCurve": 10
+    }
+  }
+}

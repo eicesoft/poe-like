@@ -1,0 +1,24 @@
+{
+  "name": "poe-like",
+  "version": "1.0.0",
+  "description": "POE 风格 2.5D 刷宝 ARPG 网页原型：战士 / 元素法师 · 装备 · 天赋树 · 技能树 · 随机地图 · 无限刷怪",
+  "type": "module",
+  "scripts": {
+    "dev": "node tools/serve.mjs",
+    "build": "node tools/build.mjs",
+    "test": "node tests/run-all.mjs",
+    "input-check": "node tools/input-check.mjs && node tools/skill-slot-check.mjs && node tools/standalone-input-check.mjs",
+    "verify": "node tests/run-all.mjs && node tools/input-check.mjs && node tools/skill-slot-check.mjs && node tools/build.mjs && node tools/standalone-input-check.mjs && node tools/check-standalone.mjs",
+    "playtest": "node tools/playtest.mjs --minutes 10 --seed 42",
+    "ttk": "node tools/sim-ttk.mjs"
+  },
+  "keywords": [
+    "arpg",
+    "poe",
+    "game",
+    "canvas"
+  ],
+  "license": "MIT",
+  "private": true,
+  "main": "src/ui/main.js"
+}

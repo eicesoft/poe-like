@@ -19,7 +19,7 @@ import {
   dealDamage, pushWorldEvent, rngOf, applyBuff, applyStun,
 } from './combat.js';
 import { queryEnemies } from './monsters.js';
-import { SKILLS, skillLevelOf, tryCast } from './skills.js';
+import { SKILLS, skillLevelOf, tryCast, skillModsOf, skillRadius } from './skills.js';
 
 /** 法师技能栏的 5 个技能（顺序 = Q W E R T） */
 export const MAGE_SKILL_IDS = Object.freeze([
@@ -79,6 +79,9 @@ export function createMageState() {
     meteorTimer: 0,
     orbTimer: 0,
     fillerCount: 0,
+    // 技能树（items/mageSkillTrees.js）带来的机制：施法计数 + 延迟效果队列
+    castCounts: {},
+    pending: [],
     // 自动循环专属技能冷却（不放进 player.cooldowns，避免出现在技能栏外）
     cooldowns: { nova: 0, chain: 0, barrier: 0 },
   };
@@ -97,6 +100,8 @@ export function ensureMageState(player) {
   if (!Number.isFinite(m.meteorTimer)) m.meteorTimer = 0;
   if (!Number.isFinite(m.orbTimer)) m.orbTimer = 0;
   if (!Number.isFinite(m.fillerCount)) m.fillerCount = 0;
+  if (!m.castCounts || typeof m.castCounts !== 'object') m.castCounts = {};
+  if (!Array.isArray(m.pending)) m.pending = [];
   if (!m.cooldowns || typeof m.cooldowns !== 'object') m.cooldowns = { nova: 0, chain: 0, barrier: 0 };
   for (const k of ['nova', 'chain', 'barrier']) {
     if (!Number.isFinite(m.cooldowns[k])) m.cooldowns[k] = 0;
@@ -148,6 +153,100 @@ export function mageTalentMods(player) {
     ultKillExtend: clamp(n('mageUltKillExtend'), 0, 2),
     controlMult: clamp(1 + n('mageControlMult'), 1, 2.5),
   };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 技能树（items/mageSkillTrees.js）的读取工具
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** 某技能的天赋聚合结果（缺失时返回中性值，绝不抛异常）。 */
+function modsOfSkill(player, skillId) {
+  return skillModsOf(player, skillId);
+}
+
+/** 读天赋的机制数值（items/skillTree.js 的 extra 汇总；缺失返回 fallback）。 */
+function extraOf(mods, key, fallback = 0) {
+  const src = mods && mods.extras;
+  const v = src && typeof src === 'object' ? src[key] : undefined;
+  return typeof v === 'number' && Number.isFinite(v) ? v : fallback;
+}
+
+/** 某个技能的施法次数 +1（技能树里的「每 N 次施法」机制用）。 */
+function bumpMageCast(player, skillId) {
+  const m = ensureMageState(player);
+  if (!m.castCounts || typeof m.castCounts !== 'object') m.castCounts = {};
+  const n = (Number(m.castCounts[skillId]) || 0) + 1;
+  m.castCounts[skillId] = n;
+  return n;
+}
+
+/**
+ * 延迟效果队列：用于「0.35 秒后二段爆炸」「流星雨」「熔岩池」这类不阻塞主循环的机制。
+ * 纯 core 内的时间队列，不依赖 setTimeout，headless 下行为一致。
+ */
+function queueMageEffect(player, delay, fn) {
+  if (typeof fn !== 'function') return;
+  const m = ensureMageState(player);
+  if (!Array.isArray(m.pending)) m.pending = [];
+  if (m.pending.length >= 64) m.pending.shift();
+  m.pending.push({ t: Math.max(0, Number(delay) || 0), fn });
+}
+
+/** 元素狂潮天赋：读取「狂潮期间」的增伤 / 爆炸 / 持续时间。 */
+function ultModsOf(player) {
+  return modsOfSkill(player, 'mageUltimate');
+}
+
+/** 元素狂潮期间所有法术的额外增伤（技能树的 damageMult + ultDamage）。 */
+function ultDamageBonus(player) {
+  const mods = ultModsOf(player);
+  const flat = extraOf(mods, 'ultDamage');
+  const mul = (mods && Number.isFinite(mods.damageMult) ? mods.damageMult : 1) - 1;
+  return Math.max(0, mul + flat);
+}
+
+/**
+ * 技能树的范围伤害：只造成伤害 + 记事件，不叠印记、不触发反应，
+ * 避免「余烬爆炸 → 反应 → 回响 → 再爆炸」的无限连锁。
+ */
+function talentSplash(world, player, targets, element, mult, skillId) {
+  if (!Array.isArray(targets) || !targets.length) return 0;
+  const mods = modsOfSkill(player, skillId);
+  const talent = mods && Number.isFinite(mods.damageMult) ? mods.damageMult : 1;
+  let n = 0;
+  for (const t of targets) {
+    if (!t || t.dead) continue;
+    const base = rollSpellBase(world, player, element, mult, skillId) * talent;
+    dealDamage(world, player, t, {
+      [element]: base,
+      canCrit: false,
+      area: true,
+      sourceSkill: skillId,
+      tags: ['spell', element, 'talentSplash', skillId],
+    });
+    n++;
+  }
+  return n;
+}
+
+/** 命中时叠冰甲护盾（寒冰箭右支）：刷新而不是叠加 buff 层数，上限 15% 最大生命。 */
+function grantIceShield(world, player, amount, cap) {
+  if (!(amount > 0) || !(cap > 0)) return;
+  const cur = player.energyShield || 0;
+  applyBuff(world, player, {
+    id: 'mageIceArmor',
+    name: '寒冰护甲',
+    text: `吸收 ${Math.round(cap)} 点伤害，持续 6 秒`,
+    type: 'buff',
+    dur: 6,
+    icon: '🧊',
+    stats: { energyShield: Math.round(cap) },
+  });
+  player.energyShield = Math.min(cap, cur + amount);
+  pushWorldEvent(world, 'mageIceArmor', {
+    x: player.x, z: player.z, amount: Math.round(amount), cap: Math.round(cap),
+    shield: Math.round(player.energyShield), hue: 195, sourceSkill: 'mageIceShard',
+  });
 }
 
 /** 切换自动循环预设 */
@@ -203,7 +302,11 @@ function rollSpellBase(world, player, element, mult, skillId) {
 /** 对单个目标打一发元素伤害；命中后叠印记并处理元素狂潮的溅射 */
 function dealSpell(world, player, target, element, mult, skillId, opts = {}) {
   if (!target || target.dead) return null;
-  const base = rollSpellBase(world, player, element, mult, skillId);
+  // 技能树：该技能的 damageMult 直接进入法术伤害；元素狂潮期间的额外增伤再乘一层。
+  const mods = modsOfSkill(player, skillId);
+  const talent = mods && Number.isFinite(mods.damageMult) ? mods.damageMult : 1;
+  let base = rollSpellBase(world, player, element, mult, skillId) * talent;
+  if (isUltActive(player)) base *= 1 + ultDamageBonus(player);
   const packet = {
     [element]: base,
     canCrit: opts.canCrit !== false,
@@ -217,19 +320,23 @@ function dealSpell(world, player, target, element, mult, skillId, opts = {}) {
     addMark(world, player, target, element);
     // 天赋「永动狂潮」：元素狂潮期间每次击杀延长爆发窗口
     if (res.dead && isUltActive(player)) {
-      const mods = mageTalentMods(player);
-      if (mods.ultKillExtend > 0) {
+      const ult = ultModsOf(player);
+      const extend = mageTalentMods(player).ultKillExtend + extraOf(ult, 'ultKillExtend');
+      if (extend > 0) {
         const m = ensureMageState(player);
-        m.ultTimer = Math.min(14, m.ultTimer + mods.ultKillExtend);
+        m.ultTimer = Math.min(20, m.ultTimer + extend);
       }
     }
     if (!opts.noUltSplash && isUltActive(player)) {
-      // 元素狂潮：每次施法附带一次小范围爆炸
-      const splashTargets = queryEnemies(world, target.x, target.z, 2.2, null);
+      // 元素狂潮：每次施法附带一次小范围爆炸（技能树可放大半径与伤害）
+      const ult = ultModsOf(player);
+      const splashRadius = 2.2 * (1 + extraOf(ult, 'ultSplashRadius'));
+      const splashPower = 0.45 * (1 + extraOf(ult, 'ultSplashPower'));
+      const splashTargets = queryEnemies(world, target.x, target.z, splashRadius, null);
       for (const t of splashTargets) {
         if (!t || t === target || t.dead) continue;
         dealDamage(world, player, t, {
-          [element]: base * 0.45,
+          [element]: base * splashPower,
           canCrit: false,
           area: true,
           sourceSkill: skillId,
@@ -237,9 +344,9 @@ function dealSpell(world, player, target, element, mult, skillId, opts = {}) {
         });
       }
       pushWorldEvent(world, 'skillCast', {
-        x: target.x, z: target.z, skillId: 'fireNova', radius: 2.2,
+        x: target.x, z: target.z, skillId: 'fireNova', radius: splashRadius,
         hue: MAGE_ELEMENTS[element] ? MAGE_ELEMENTS[element].hue : 30,
-        sourceSkill: skillId, ultSplash: true,
+        sourceSkill: skillId, ultSplash: true, torrent: extraOf(ult, 'ultSplashPower') > 0,
       });
     }
   }
@@ -429,38 +536,267 @@ function spellTarget(world, player, aim, range = 12) {
   return mageTarget(world, player);
 }
 
-/** 填充技：单体元素伤害 */
-function castBolt(world, player, element, aim) {
+/** 在指定点附近找最多 n 个敌人（排除 exclude / 已命中集合）。 */
+function pickNearbyEnemies(world, x, z, radius, n, exclude = null, hit = null) {
+  const out = [];
+  const list = queryEnemies(world, x, z, radius, null);
+  list.sort((a, b) => ((a.x - x) ** 2 + (a.z - z) ** 2) - ((b.x - x) ** 2 + (b.z - z) ** 2));
+  for (const t of list) {
+    if (!t || t.dead || t === exclude || (hit && hit.has(t))) continue;
+    out.push(t);
+    if (out.length >= n) break;
+  }
+  return out;
+}
+
+/** 火焰填充技的命中后机制（余烬 / 吸血蓝 / 余火追击 / 凤凰）。 */
+function onFireboltHit(world, player, target, mult, mods) {
+  const rng = rngOf(world);
+  // 炽焰护体：命中回复生命/法力
+  const healPct = extraOf(mods, 'healPct');
+  if (healPct > 0) player.hp = Math.min(player.maxHp, player.hp + player.maxHp * healPct);
+  const manaGain = extraOf(mods, 'manaOnHit');
+  if (manaGain > 0) player.mp = Math.min(player.maxMp, player.mp + manaGain);
+
+  // 余烬：命中概率引爆
+  const emberChance = clamp(extraOf(mods, 'emberBurst'), 0, 1);
+  if (emberChance > 0 && rng.chance(emberChance)) {
+    const radius = 1.6 * (1 + extraOf(mods, 'emberRadius'));
+    const around = pickNearbyEnemies(world, target.x, target.z, radius, 6, target);
+    talentSplash(world, player, around, 'fire', mult * 0.5, 'mageFirebolt');
+    pushWorldEvent(world, 'mageEmberBurst', {
+      x: target.x, z: target.z, radius, hue: 24,
+      hits: around.length, sourceSkill: 'mageFirebolt',
+    });
+  }
+
+  // 余火追击：额外飞弹
+  const echoChance = clamp(extraOf(mods, 'fireEcho'), 0, 1);
+  if (echoChance > 0 && rng.chance(echoChance)) {
+    const echoTarget = target.dead ? pickNearbyEnemies(world, target.x, target.z, 5, 1, target)[0] : target;
+    if (echoTarget && !echoTarget.dead) {
+      dealSpell(world, player, echoTarget, 'fire', mult * 0.5, 'mageFirebolt', { noUltSplash: true });
+      pushWorldEvent(world, 'skillCast', {
+        x: echoTarget.x, z: echoTarget.z, skillId: 'mageFirebolt', radius: 0.8,
+        hue: 24, fromX: player.x, fromZ: player.z, element: 'fire',
+        sourceSkill: 'mageFirebolt', echo: true,
+      });
+    }
+  }
+
+  // 凤凰之焰（终极）：每 N 次灼热飞弹召唤一次大范围冲击
+  if (extraOf(mods, 'phoenix') > 0) {
+    const every = Math.max(2, Math.round(extraOf(mods, 'phoenixEvery', 6)));
+    const count = bumpMageCast(player, 'mageFirebolt');
+    if (count % every === 0) {
+      const control = mageTalentMods(player).controlMult;
+      const radius = 4.5 * (1 + (mods && mods.radiusMult ? mods.radiusMult : 0));
+      const around = queryEnemies(world, target.x, target.z, radius, null);
+      for (const t of around) {
+        if (!t || t.dead) continue;
+        talentSplash(world, player, [t], 'fire', mult * (t === target ? 1.3 : 0.85), 'mageFirebolt');
+        if (!t.dead) applyStun(world, t, 0.35 * control, 'mageFirebolt');
+      }
+      pushWorldEvent(world, 'magePhoenix', {
+        x: target.x, z: target.z, radius, hue: 24,
+        fromX: player.x, fromZ: player.z, sourceSkill: 'mageFirebolt',
+      });
+    }
+  }
+}
+
+/** 冰霜填充技的命中后机制（冰爆 / 分裂 / 冰甲 / 极寒领域）。 */
+function onIceShardHit(world, player, target, mult, mods) {
+  const rng = rngOf(world);
+  const control = mageTalentMods(player).controlMult;
+
+  const burstChance = clamp(extraOf(mods, 'iceBurst'), 0, 1);
+  if (burstChance > 0 && rng.chance(burstChance)) {
+    const radius = 1.7 * (1 + (mods && mods.radiusMult ? mods.radiusMult : 0));
+    const around = pickNearbyEnemies(world, target.x, target.z, radius, 6, target);
+    talentSplash(world, player, around, 'cold', mult * 0.5, 'mageIceShard');
+    const freeze = extraOf(mods, 'iceBurstStun');
+    if (freeze > 0) {
+      for (const t of around) if (!t.dead) applyStun(world, t, freeze * control, 'mageIceShard');
+      if (!target.dead) applyStun(world, target, freeze * control, 'mageIceShard');
+    }
+    pushWorldEvent(world, 'mageFrostBurst', {
+      x: target.x, z: target.z, radius, hue: 195,
+      hits: around.length, frozen: freeze > 0, sourceSkill: 'mageIceShard',
+    });
+  }
+
+  // 冰甲：命中获得护盾（刷新，不叠层）
+  const shieldPct = extraOf(mods, 'iceShield');
+  if (shieldPct > 0) {
+    const cap = (player.maxHp || 1) * 0.15;
+    grantIceShield(world, player, (player.maxHp || 1) * shieldPct, cap);
+  }
+
+  // 分裂：向附近敌人弹射冰片
+  const split = Math.floor(extraOf(mods, 'iceSplit'));
+  if (split > 0) {
+    const others = pickNearbyEnemies(world, target.x, target.z, 5, split, target);
+    for (const t of others) {
+      dealSpell(world, player, t, 'cold', mult * 0.45, 'mageIceShard', { noUltSplash: true });
+      pushWorldEvent(world, 'skillCast', {
+        x: t.x, z: t.z, skillId: 'mageIceShard', radius: 0.8,
+        hue: 195, fromX: target.x, fromZ: target.z, element: 'cold',
+        sourceSkill: 'mageIceShard', split: true,
+      });
+    }
+  }
+
+  // 极寒领域（终极）：每 N 次寒冰箭冻结一片区域
+  if (extraOf(mods, 'frozenField') > 0) {
+    const every = Math.max(2, Math.round(extraOf(mods, 'frozenFieldEvery', 8)));
+    const count = bumpMageCast(player, 'mageIceShard');
+    if (count % every === 0) {
+      const radius = 4.4 * (1 + (mods && mods.radiusMult ? mods.radiusMult : 0));
+      const around = queryEnemies(world, target.x, target.z, radius, null);
+      talentSplash(world, player, around, 'cold', mult * 1.05, 'mageIceShard');
+      for (const t of around) if (!t.dead) applyStun(world, t, 1.0 * control, 'mageIceShard');
+      pushWorldEvent(world, 'mageIceField', {
+        x: target.x, z: target.z, radius, hue: 195, dur: 1.2,
+        frozen: around.length, sourceSkill: 'mageIceShard',
+      });
+    }
+  }
+}
+
+/** 闪电填充技的命中后机制（静电 / 跳弧 / 疾电 / 额外电弧 / 雷暴）。 */
+function onArcHit(world, player, target, mult, mods, depth) {
+  const rng = rngOf(world);
+
+  // 静电：额外叠 1 层雷印记
+  if (extraOf(mods, 'staticMark') > 0) addMark(world, player, target, 'lightning');
+
+  // 疾电：命中获得移速
+  const haste = extraOf(mods, 'arcHaste');
+  if (haste > 0) {
+    applyBuff(world, player, {
+      id: 'mageArcHaste',
+      name: '疾电',
+      text: `移动速度 +${Math.round(haste * 100)}%`,
+      type: 'buff',
+      dur: 3,
+      icon: '⚡',
+      stats: { moveSpeedMult: haste },
+    });
+    pushWorldEvent(world, 'mageArcHaste', {
+      x: player.x, z: player.z, hue: 55, amount: haste, sourceSkill: 'mageArc',
+    });
+  }
+
+  // 跳弧：向后跳到附近敌人
+  const jumps = Math.floor(extraOf(mods, 'arcJump'));
+  if (jumps > 0) {
+    let current = target;
+    const hit = new Set([target]);
+    for (let i = 0; i < jumps; i++) {
+      const next = pickNearbyEnemies(world, current.x, current.z, 5, 1, current, hit)[0];
+      if (!next) break;
+      hit.add(next);
+      const jumpMult = mult * Math.max(0.3, 0.55 - 0.06 * i);
+      dealSpell(world, player, next, 'lightning', jumpMult, 'mageArc', { noUltSplash: true });
+      pushWorldEvent(world, 'mageArcJump', {
+        x: next.x, z: next.z, fromX: current.x, fromZ: current.z,
+        index: i, hue: 55, sourceSkill: 'mageArc',
+      });
+      current = next;
+    }
+  }
+
+  // 过载·极：概率额外释放一次电弧（限制 depth 防止递归）
+  const doubleChance = clamp(extraOf(mods, 'arcDouble'), 0, 1);
+  if (depth < 1 && doubleChance > 0 && rng.chance(doubleChance)) {
+    const extraTarget = pickNearbyEnemies(world, target.x, target.z, 8, 1, null)[0] || target;
+    if (extraTarget && !extraTarget.dead) {
+      dealSpell(world, player, extraTarget, 'lightning', mult * 0.7, 'mageArc', { noUltSplash: true });
+      pushWorldEvent(world, 'skillCast', {
+        x: extraTarget.x, z: extraTarget.z, skillId: 'mageArc', radius: 0.9,
+        hue: 55, fromX: player.x, fromZ: player.z, element: 'lightning',
+        sourceSkill: 'mageArc', overload: true,
+      });
+    }
+  }
+
+  // 雷霆万钧（终极）：每 N 次电弧召唤天雷
+  if (extraOf(mods, 'thunderstorm') > 0) {
+    const every = Math.max(2, Math.round(extraOf(mods, 'thunderEvery', 5)));
+    const count = bumpMageCast(player, 'mageArc');
+    if (count % every === 0) {
+      const radius = 6.0;
+      const points = [];
+      const around = queryEnemies(world, target.x, target.z, radius, null).filter((t) => t && !t.dead);
+      for (const t of around.slice(0, 6)) points.push({ x: t.x, z: t.z });
+      for (const t of around) talentSplash(world, player, [t], 'lightning', mult * 0.7, 'mageArc');
+      pushWorldEvent(world, 'mageThunder', {
+        x: target.x, z: target.z, radius, hue: 55,
+        points, count: points.length, sourceSkill: 'mageArc',
+      });
+    }
+  }
+}
+
+/** 填充技：单体元素伤害（技能树会追加各种命中机制）。 */
+function castBolt(world, player, element, aim, depth = 0) {
   const target = spellTarget(world, player, aim, 12);
   if (!target) return false;
   const def = MAGE_ELEMENTS[element];
   const skillId = def.skillId;
-  dealSpell(world, player, target, element, 1.15, skillId);
+  const mods = modsOfSkill(player, skillId);
+  const markMax = mageTalentMods(player).markMax;
+  const marks = marksOf(target);
+  let mult = 1.15;
+  // 焚尽 / 霜刺：条件增伤在命中前结算
+  if (element === 'fire' && (marks.fire || 0) >= markMax) mult *= 1 + extraOf(mods, 'executeFire');
+  if (element === 'cold' && (target.stunTime || 0) > 0) mult *= 1 + extraOf(mods, 'shatterMult');
+  const res = dealSpell(world, player, target, element, mult, skillId);
   pushWorldEvent(world, 'skillCast', {
     x: target.x, z: target.z, skillId, radius: 0.8, hue: def.hue,
     fromX: player.x, fromZ: player.z, element,
     sourceSkill: skillId,
   });
+  if (res && res.hit) {
+    if (element === 'fire') onFireboltHit(world, player, target, mult, mods);
+    else if (element === 'cold') onIceShardHit(world, player, target, mult, mods);
+    else onArcHit(world, player, target, mult, mods, depth);
+  }
   return true;
 }
 
-/** 炎爆术：目标周围 AoE；目标带 3 层火印记时强化并消耗印记 */
+/** 一颗小陨星：范围火焰伤害 + 事件（流星雨 / 天火焚世共用）。 */
+function meteorStrike(world, player, x, z, mult, level = 1, radius = 1.7) {
+  const around = queryEnemies(world, x, z, radius, null);
+  talentSplash(world, player, around, 'fire', mult, 'magePyro');
+  pushWorldEvent(world, 'mageMeteor', {
+    x, z, radius, hue: 24, level,
+    fromX: player.x, fromZ: player.z, sourceSkill: 'magePyro',
+  });
+}
+
+/** 炎爆术：目标周围 AoE；目标带满层火印记时强化并消耗印记。 */
 function castPyro(world, player, aim) {
   const target = spellTarget(world, player, aim, 12);
   if (!target) return false;
-  const mods = mageTalentMods(player);
+  const mods = modsOfSkill(player, 'magePyro');
+  const enemyMods = mageTalentMods(player);
   const marks = marksOf(target);
-  const empowered = (marks.fire || 0) >= mods.markMax;
+  const empowered = (marks.fire || 0) >= enemyMods.markMax;
   if (empowered) marks.fire = 0;
-  const radius = 3.0 * (1 + (player.stats ? player.stats.aoeMult || 0 : 0));
+  // 半径统一走 core 的 skillRadius：天赋 radiusMult + 等级成长 + aoe 全部生效
+  const radius = skillRadius(player, 'magePyro', SKILLS.magePyro, 3.0);
   const targets = queryEnemies(world, target.x, target.z, radius, null);
-  const mult = (empowered ? 1.9 : 1.25) * (empowered ? 1 + mods.empoweredMult : 1);
+  let mult = (empowered ? 1.9 : 1.25) * (empowered ? 1 + enemyMods.empoweredMult : 1);
+  if (empowered) mult *= 1 + extraOf(mods, 'pyroExecute');
   for (const t of targets) {
     if (!t || t.dead) continue;
     dealSpell(world, player, t, 'fire', mult, 'magePyro', { area: true });
   }
   if (empowered) {
-    if (!target.dead) applyStun(world, target, 1.0 * mods.controlMult, 'magePyro');
+    const stun = 1.0 * enemyMods.controlMult * (1 + extraOf(mods, 'pyroStun'));
+    if (!target.dead) applyStun(world, target, stun, 'magePyro');
     addResonance(player, 25);
   }
   pushWorldEvent(world, 'skillCast', {
@@ -468,6 +804,69 @@ function castPyro(world, player, aim) {
     hue: empowered ? 38 : 24, empowered, sourceSkill: 'magePyro',
     fromX: player.x, fromZ: player.z,
   });
+
+  // ── 陨火支线：双重引爆 / 流星雨 ───────────────────────────────────────────
+  const doublePower = extraOf(mods, 'doubleDetonate');
+  if (doublePower > 0) {
+    queueMageEffect(player, 0.35, () => {
+      const around = queryEnemies(world, target.x, target.z, radius * 0.9, null);
+      talentSplash(world, player, around, 'fire', mult * doublePower, 'magePyro');
+      pushWorldEvent(world, 'mageDoubleDetonate', {
+        x: target.x, z: target.z, radius: radius * 0.9, hue: 32,
+        fromX: player.x, fromZ: player.z, sourceSkill: 'magePyro',
+      });
+    });
+  }
+  const rain = Math.floor(extraOf(mods, 'meteorRain'));
+  if (rain > 0) {
+    const points = pickNearbyEnemies(world, target.x, target.z, radius, rain, target);
+    points.forEach((t, i) => {
+      queueMageEffect(player, 0.12 + i * 0.1, () => {
+        if (!t || t.dead) return;
+        meteorStrike(world, player, t.x, t.z, mult * 0.5, 1, 1.6);
+      });
+    });
+    if (points.length) {
+      pushWorldEvent(world, 'mageMeteorRain', {
+        x: target.x, z: target.z, radius, hue: 24,
+        points: points.map((t) => ({ x: t.x, z: t.z })), count: points.length,
+        sourceSkill: 'magePyro',
+      });
+    }
+  }
+
+  // ── 熔核支线：熔岩池 / 天火焚世 ───────────────────────────────────────────
+  if (extraOf(mods, 'lavaPool') > 0) {
+    const lavaRadius = radius * 0.85;
+    const tickPower = 0.35 * (1 + extraOf(mods, 'lavaPower'));
+    const ticks = 3;
+    const tick = (i) => {
+      if (!isMage(player) || player.dead) return;
+      const around = queryEnemies(world, target.x, target.z, lavaRadius, null);
+      talentSplash(world, player, around, 'fire', mult * tickPower, 'magePyro');
+      pushWorldEvent(world, 'mageLava', {
+        x: target.x, z: target.z, radius: lavaRadius, hue: 18,
+        tick: i, ticks, dur: 3, power: tickPower,
+        sourceSkill: 'magePyro',
+      });
+      if (i < ticks - 1) queueMageEffect(player, 0.9, () => tick(i + 1));
+    };
+    tick(0);
+  }
+  if (extraOf(mods, 'cataclysm') > 0) {
+    const points = queryEnemies(world, target.x, target.z, radius, null)
+      .filter((t) => t && !t.dead)
+      .slice(0, 8)
+      .map((t) => ({ x: t.x, z: t.z }));
+    if (!points.length) points.push({ x: target.x, z: target.z });
+    points.forEach((p, i) => {
+      queueMageEffect(player, 0.08 * i, () => meteorStrike(world, player, p.x, p.z, mult * 1.0, 2, 1.8));
+    });
+    pushWorldEvent(world, 'mageCataclysm', {
+      x: target.x, z: target.z, radius: radius * 1.2, hue: 24,
+      points, count: points.length, sourceSkill: 'magePyro',
+    });
+  }
   return true;
 }
 
@@ -622,8 +1021,11 @@ export function activateMageUltimate(world, player) {
   if (!isMage(player) || player.dead) return false;
   const m = ensureMageState(player);
   if (m.ultTimer > 0 || m.resonance < 100) return false;
-  const mods = mageTalentMods(player);
-  const duration = 8 + mods.ultDuration;
+  const passive = mageTalentMods(player);
+  const mods = ultModsOf(player);
+  const lv = Math.max(1, skillLevelOf(player, 'mageUltimate') || 1);
+  // 技能树：持续时间 / 冷却 / 奇点全部生效；技能等级每级再 +0.3 秒。
+  const duration = 8 + passive.ultDuration + extraOf(mods, 'ultDuration') + (lv - 1) * 0.3;
   m.resonance = 0;
   m.ultTimer = duration;
   m.gcd = 0;
@@ -636,11 +1038,26 @@ export function activateMageUltimate(world, player) {
     icon: '🌌',
   });
   // 防止在持续期间重复触发（T 的冷却环也会显示）
-  player.cooldowns.mageUltimate = Math.max(4, 9 * mods.ultCdr);
+  const cdr = clamp(1 - extraOf(mods, 'ultCdr'), 0.35, 1);
+  player.cooldowns.mageUltimate = Math.max(4, 9 * passive.ultCdr * cdr);
   pushWorldEvent(world, 'skillCast', {
     x: player.x, z: player.z, skillId: 'mageUltimate', radius: 4,
     hue: 280, sourceSkill: 'mageUltimate', duration,
+    level: lv, singularity: extraOf(mods, 'ultSingularity') > 0,
   });
+  // 元素奇点：开启瞬间吸附并眩晕周围敌人（纯视觉的吸附 + 实打实的眩晕）
+  if (extraOf(mods, 'ultSingularity') > 0) {
+    const radius = 4.6 * (1 + extraOf(mods, 'ultRadius'));
+    const around = queryEnemies(world, player.x, player.z, radius, null);
+    for (const t of around) {
+      if (!t || t.dead) continue;
+      applyStun(world, t, 0.7 * passive.controlMult, 'mageUltimate');
+    }
+    pushWorldEvent(world, 'mageSingularity', {
+      x: player.x, z: player.z, radius, hue: 280, phase: 'open',
+      count: around.length, sourceSkill: 'mageUltimate',
+    });
+  }
   return true;
 }
 
@@ -648,15 +1065,30 @@ export function activateMageUltimate(world, player) {
 function endMageUltimate(world, player) {
   const m = ensureMageState(player);
   m.ultTimer = 0;
-  const targets = queryEnemies(world, player.x, player.z, 4.6, null);
+  const passive = mageTalentMods(player);
+  const mods = ultModsOf(player);
+  const radius = 4.6 * (1 + extraOf(mods, 'ultRadius') + extraOf(mods, 'ultEndRadius'));
+  // 注意：技能树 damageMult 由 dealSpell 统一乘入，这里只给基础倍率，避免重复放大。
+  const power = 1.6;
+  const targets = queryEnemies(world, player.x, player.z, radius, null);
   for (const t of targets) {
     if (!t || t.dead) continue;
-    dealSpell(world, player, t, 'fire', 1.6, 'mageUltimate', { area: true, noUltSplash: true });
+    dealSpell(world, player, t, 'fire', power, 'mageUltimate', { area: true, noUltSplash: true });
   }
   pushWorldEvent(world, 'skillCast', {
-    x: player.x, z: player.z, skillId: 'iceNova', radius: 5.2,
+    x: player.x, z: player.z, skillId: 'iceNova', radius,
     hue: 280, ultimateEnd: true, sourceSkill: 'mageUltimate',
   });
+  if (extraOf(mods, 'ultSingularity') > 0) {
+    for (const t of targets) if (!t.dead) applyStun(world, t, 0.8 * passive.controlMult, 'mageUltimate');
+    pushWorldEvent(world, 'mageSingularity', {
+      x: player.x, z: player.z, radius, hue: 280, phase: 'close',
+      count: targets.length, sourceSkill: 'mageUltimate',
+    });
+  }
+  // 超载共鸣：结束时保留一部分共鸣，让下一轮狂潮更快到来
+  const keep = extraOf(mods, 'ultResonanceKeep');
+  if (keep > 0) addResonance(player, keep);
 }
 
 /** 自动施法是否可用（冷却 + 蓝量） */
@@ -744,6 +1176,19 @@ export function updateMage(world, player, dt) {
   if (m.ultTimer > 0) {
     m.ultTimer = Math.max(0, m.ultTimer - step);
     if (m.ultTimer <= 0) endMageUltimate(world, player);
+  }
+
+  // 技能树延迟效果（二段爆炸 / 流星雨 / 熔岩池 / 天火）：到点执行，不影响主循环节奏
+  if (Array.isArray(m.pending) && m.pending.length) {
+    for (let i = m.pending.length - 1; i >= 0; i--) {
+      const task = m.pending[i];
+      if (!task) { m.pending.splice(i, 1); continue; }
+      task.t -= step;
+      if (task.t <= 0) {
+        m.pending.splice(i, 1);
+        try { task.fn(); } catch { /* 单个延迟效果失败不能拖垮整帧 */ }
+      }
+    }
   }
 
   // 天赋自动系统：陨星 / 环形法球（不受 GCD 限制，是"被动触发"）

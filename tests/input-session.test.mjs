@@ -251,7 +251,7 @@ describe('存档 round-trip（save → load → applySave）', () => {
     inv.gold = 4321;
     inv.equip.helmet = fakeItem({ uid: 'helm1', slot: 'helmet', name: '头盔', stats: { armor: 12 } });
     inv.bag.push(fakeItem({ uid: 'bag1' }), fakeItem({ uid: 'bag2', slot: 'ring' }));
-    inv.talents = ['start-warrior', 't-armor'];
+    inv.talents = ['start-warrior', 'forge-trunc'];
     inv.talentPoints = 5;
     inv.skillRanks = { 'stomp.root': 2, 'whirlwind.root': 1 };
     inv.skillRefine = { stomp: 3 };
@@ -265,7 +265,8 @@ describe('存档 round-trip（save → load → applySave）', () => {
     // 新开一局（全新 game，模拟"重启游戏"）→ 用存档恢复
     const fresh = createGame({});
     const freshInvRef = fresh.inv;
-    assert.equal(fresh.world.tier, 1, '新游戏默认第 1 层');
+    assert.equal(fresh.world.tier, 0, '新游戏默认在庇护所（第 0 层）');
+    assert.equal(fresh.world.map.isHome, true, '新游戏默认地图是家');
     assert.equal(applySave(fresh, loaded), true);
 
     // inv 引用不能换（world.inventory 也指向它）
@@ -286,7 +287,7 @@ describe('存档 round-trip（save → load → applySave）', () => {
     assert.equal(fresh.world.career.playTime, 321);
     assert.equal(fresh.inv.equip.helmet.uid, 'helm1');
     assert.equal(fresh.inv.bag.length, 2);
-    assert.deepEqual(fresh.inv.talents, ['start-warrior', 't-armor']);
+    assert.deepEqual(fresh.inv.talents, ['start-warrior', 'forge-trunc']);
     assert.deepEqual(fresh.inv.skillRanks, { 'stomp.root': 2, 'whirlwind.root': 1 });
     assert.deepEqual(fresh.inv.skillRefine, { stomp: 3 });
     assert.equal(fresh.inv.skillOrbs, 9);

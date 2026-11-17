@@ -7,6 +7,12 @@ export const TILE_FLOOR = 0;
 export const TILE_WALL = 1;
 export const TILE_DOOR = 2;
 
+/** 庇护所（家）主题：暖色木质大厅，和战斗地图一眼能区分。 */
+export const HOME_THEME = Object.freeze({
+  id: 'home', name: '庇护所', floor: '#30271f', wall: '#584433',
+  accent: '#ffcf7a', fog: '#120c07',
+});
+
 export const MAP_THEMES = [
   { id: 'crypt', name: '众星教堂遗迹', floor: '#2a2622', wall: '#4a4038', accent: '#c8a25a', fog: '#150f0b' },
   { id: 'cavern', name: '骸骨洞窟', floor: '#21242a', wall: '#3a4048', accent: '#7fd4ff', fog: '#0a1014' },
@@ -311,6 +317,75 @@ export function generateDungeon(opts = {}) {
   const torchCap = Math.round(60 + (d.cols * d.rows) / 90);
   if (d.torches.length > torchCap) d.torches = rng.shuffle(d.torches).slice(0, torchCap);
 
+  return d;
+}
+
+/**
+ * 庇护所（家）：一间安全的大厅，没有怪物、没有地图词缀。
+ *
+ * 布局（tile 坐标）：
+ *   · 44×34 的矩形大厅，四周 2 格墙；
+ *   · 玩家出生在大厅下方中央，正面一排交互点：仓库 / 商人 / 赌徒 / 战斗之门；
+ *   · 四角各有 2×2 装饰柱，避免大厅显得空；
+ *   · 墙边一圈火把，暖色（首页不黑）。
+ *
+ * `homeSpots` 是交互点的世界坐标，由 game/home.js 转成 interactables。
+ * @param {{seed?:number}} [opts]
+ * @returns {Dungeon}
+ */
+export function generateHomeDungeon(opts = {}) {
+  const seed = (opts.seed ?? 0x4d3c2b1a) >>> 0;
+  const d = new Dungeon(44, 34, 1);
+  d.seed = seed;
+  d.theme = HOME_THEME;
+  d.style = 'home';
+  d.size = 'home';
+  d.level = 1;
+  d.sizeFactor = 1;
+  d.isHome = true;
+  d.bossRoom = null;
+  d.doors = [];
+
+  const { cols, rows } = d;
+  d.tiles.fill(TILE_WALL);
+  // 大厅地板（2 格墙）
+  carveRect(d, 2, 2, cols - 4, rows - 4);
+  // 四角装饰柱（2×2 墙格），不挡中央的交互区
+  for (const [px, pz] of [[8, 8], [cols - 10, 8], [8, rows - 10], [cols - 10, rows - 10]]) {
+    d.set(px, pz, TILE_WALL);
+    d.set(px + 1, pz, TILE_WALL);
+    d.set(px, pz + 1, TILE_WALL);
+    d.set(px + 1, pz + 1, TILE_WALL);
+  }
+  d.rooms = [{ x: 2, z: 2, w: cols - 4, h: rows - 4, type: 'home' }];
+
+  // 玩家从下方进入，面向一排设施
+  const cx = Math.floor(cols / 2);
+  const cz = Math.floor(rows / 2) - 2;
+  d.playerStart = d.toWorld(cx, rows - 8);
+  d.homeSpots = {
+    stash: d.toWorld(cx - 13, cz),
+    merchant: d.toWorld(cx - 5, cz),
+    gambler: d.toWorld(cx + 4, cz),
+    portal: d.toWorld(cx + 12, cz),
+  };
+
+  // 墙边火把（确定性间隔，保证每次回家的观感一致）
+  d.torches = [];
+  const torchColors = [HOME_THEME.accent, '#ffb060', '#ffd9a0'];
+  const pushTorch = (cxT, czT, i) => {
+    const w = d.toWorld(cxT, czT);
+    d.torches.push({ x: w.x, z: w.z, color: torchColors[i % torchColors.length] });
+  };
+  let ti = 0;
+  for (let x = 6; x <= cols - 5; x += 6) {
+    pushTorch(x, 3, ti++);
+    pushTorch(x, rows - 4, ti++);
+  }
+  for (let z = 8; z <= rows - 7; z += 7) {
+    pushTorch(3, z, ti++);
+    pushTorch(cols - 4, z, ti++);
+  }
   return d;
 }
 

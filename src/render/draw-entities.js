@@ -75,6 +75,142 @@ export const renderEntities = {
     }
   },
 
+  /**
+   * 庇护所交互物：仓库 / 商人 / 赌徒 / 战斗之门。
+   * 地面光环 + 浮动图标 + 名称；战斗之门额外画旋转符文与光柱。
+   * 数据来自 world.interactables（game/home.js），战斗地图为空数组。
+   */
+  _drawHomeInteractables(ctx, cam, world) {
+    const list = world && world.interactables;
+    if (!Array.isArray(list) || !list.length) return;
+    const u = cam.scale;
+    const p = this.scratch;
+    const t = this.time;
+    const player = world.player;
+
+    // 庇护所地毯：一条横贯四个设施的暖色长毯（先画，设施光环压在上面）
+    {
+      let minX = Infinity, maxX = -Infinity, sumZ = 0, n = 0;
+      for (const it of list) {
+        if (!it || !Number.isFinite(it.x)) continue;
+        minX = Math.min(minX, it.x);
+        maxX = Math.max(maxX, it.x);
+        sumZ += it.z;
+        n++;
+      }
+      if (n > 0) {
+        const z0 = sumZ / n - 2.2;
+        const z1 = sumZ / n + 2.2;
+        const a = cam.worldToScreen(minX - 2.2, z0, 0);
+        const b = cam.worldToScreen(maxX + 2.2, z0, 0);
+        const c = cam.worldToScreen(maxX + 2.2, z1, 0);
+        const d = cam.worldToScreen(minX - 2.2, z1, 0);
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(b.x, b.y);
+        ctx.lineTo(c.x, c.y);
+        ctx.lineTo(d.x, d.y);
+        ctx.closePath();
+        ctx.fillStyle = 'rgba(92, 34, 24, 0.32)';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255, 207, 122, 0.30)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+
+    for (const it of list) {
+      if (!it || !Number.isFinite(it.x) || !Number.isFinite(it.z)) continue;
+      cam.worldToScreen(it.x, it.z, 0, p);
+      if (p.x < -160 || p.x > this.w + 160 || p.y < -200 || p.y > this.h + 120) continue;
+      const portal = it.kind === 'portal';
+      const col = parseColor(it.color || '#ffcf7a');
+      const rgba = (l, a) => `hsla(${col.h}, ${Math.min(100, col.s + 10)}%, ${l}%, ${a})`;
+      const near = !!(player && Math.hypot(player.x - it.x, player.z - it.z) <= (it.range ?? 2.6));
+      const pulse = 0.72 + Math.sin(t * 2.6 + it.z * 1.7) * 0.16 + (near ? 0.18 : 0);
+      const R = u * (portal ? 1.9 : 0.95);
+
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+
+      // 地面光环
+      const grad = ctx.createRadialGradient(p.x, p.y, R * 0.08, p.x, p.y, R * 1.5);
+      grad.addColorStop(0, rgba(78, 0.34 * pulse));
+      grad.addColorStop(0.55, rgba(58, 0.18 * pulse));
+      grad.addColorStop(1, rgba(45, 0));
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.ellipse(p.x, p.y, R * 1.5, R * 1.5 * cam.squash, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = rgba(72, 0.85 * pulse);
+      ctx.lineWidth = portal ? 3 : 2;
+      ctx.beginPath();
+      ctx.ellipse(p.x, p.y, R, R * cam.squash, 0, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // 战斗之门：旋转符文 + 光柱
+      if (portal) {
+        ctx.strokeStyle = rgba(85, 0.7 * pulse);
+        ctx.lineWidth = 1.6;
+        for (let i = 0; i < 8; i++) {
+          const a = t * 0.7 + (i / 8) * Math.PI * 2;
+          const rx = Math.cos(a) * R * 1.22;
+          const rz = Math.sin(a) * R * 1.22 * cam.squash;
+          ctx.beginPath();
+          ctx.arc(p.x + rx, p.y + rz, Math.max(1.2, u * 0.075), 0, Math.PI * 2);
+          ctx.stroke();
+        }
+        const beamH = u * 3.2;
+        const beam = ctx.createLinearGradient(p.x, p.y - beamH, p.x, p.y);
+        beam.addColorStop(0, rgba(78, 0));
+        beam.addColorStop(0.55, rgba(70, 0.14 * pulse));
+        beam.addColorStop(1, rgba(62, 0.32 * pulse));
+        ctx.fillStyle = beam;
+        ctx.beginPath();
+        ctx.moveTo(p.x - R * 0.72, p.y);
+        ctx.lineTo(p.x - R * 0.4, p.y - beamH);
+        ctx.lineTo(p.x + R * 0.4, p.y - beamH);
+        ctx.lineTo(p.x + R * 0.72, p.y);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      // 设施本体：一个悬浮的符文图标
+      const bob = Math.sin(t * 2.1 + it.x * 0.9) * u * 0.08;
+      const iconY = p.y - u * (portal ? 1.55 : 1.2) + bob;
+      const iconR = u * (portal ? 0.62 : 0.46);
+      const halo = ctx.createRadialGradient(p.x, iconY, 0, p.x, iconY, iconR * 1.7);
+      halo.addColorStop(0, rgba(90, 0.55));
+      halo.addColorStop(1, rgba(60, 0));
+      ctx.fillStyle = halo;
+      ctx.beginPath();
+      ctx.arc(p.x, iconY, iconR * 1.7, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.font = `${Math.max(14, Math.round(iconR * 1.5))}px "Segoe UI Emoji","Apple Color Emoji",sans-serif`;
+      ctx.globalAlpha = 0.95;
+      ctx.fillText(it.icon || '◆', p.x, iconY);
+      ctx.globalAlpha = 1;
+
+      // 名称 + F 提示
+      const labelY = p.y - u * (portal ? 2.45 : 2.0);
+      ctx.font = `600 ${Math.max(10, Math.round(u * 0.24))}px "Rajdhani","Segoe UI",system-ui,sans-serif`;
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = 'rgba(0,0,0,0.75)';
+      const label = `${it.name || it.kind || ''}${near ? '  [F]' : ''}`;
+      ctx.strokeText(label, p.x, labelY);
+      ctx.fillStyle = near ? rgba(88, 1) : rgba(74, 0.9);
+      ctx.fillText(label, p.x, labelY);
+      ctx.restore();
+    }
+  },
+
   /** 地面阴影：所有实体先统一画（这样 z 排序时阴影不会盖住别人） */
   _drawShadows(ctx, cam, world) {
     if (!world) return;

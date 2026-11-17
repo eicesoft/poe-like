@@ -8,6 +8,8 @@ import {
   MAGE_TALENTS, MAGE_TALENT_BY_ID, MAGE_START_NODE, MAGE_BRANCHES,
   mageReachableFrom, mageTalentStats,
 } from '../src/items/mageTalentTree.js';
+import { TALENTS, talentStats } from '../src/items/talentTree.js';
+import { ITEM_STAT_KEYS } from '../src/items/common.js';
 
 function makeMageGame(seed = 42) {
   const game = createGame({ classId: 'mage', seed });
@@ -37,22 +39,106 @@ function eventsOfType(game, type) {
 }
 
 describe('元素法师 · 专属天赋树', () => {
-  test('数据：4 条主干 + 全连通 + 起点/基石/传奇数量正确', () => {
+  test('数据：4 条主干 + 全连通 + 70 节点与战士树对齐', () => {
     const s = mageTalentStats();
-    assert.equal(s.total, 37, '法师天赋树应为 37 个节点');
+    assert.equal(s.total, 70, '法师天赋树应为 70 个节点');
+    assert.equal(MAGE_TALENTS.length, TALENTS.length, '法师与战士天赋数量必须一致');
     assert.equal(MAGE_BRANCHES.length, 4);
     assert.deepEqual(MAGE_BRANCHES.map((b) => b.id).sort(), ['arcane', 'fire', 'frost', 'storm']);
     assert.equal(mageReachableFrom().size, MAGE_TALENTS.length, '所有节点都应从起点可达');
     assert.equal(s.byKind.classStart, 1);
     assert.equal(s.byKind.keystone, 4);
-    assert.equal(s.byKind.legendary, 4);
+    assert.equal(s.byKind.legendary, 5);
+    // 结构对齐：两边都是 9 个「基石 + 传奇」大节点；每棵树都能提供足够多的构筑点。
+    const w = talentStats();
+    assert.equal((s.byKind.keystone + s.byKind.legendary), (w.byKind.keystone + w.byKind.legendary),
+      '两个职业的基石 + 传奇数量应一致');
+    assert.ok(s.byKind.notable >= 8, `法师 notable 只有 ${s.byKind.notable}`);
     assert.ok(MAGE_TALENT_BY_ID[MAGE_START_NODE], '起点存在');
     // 起点不能连到战士树的起点
     assert.ok(!MAGE_TALENT_BY_ID[MAGE_START_NODE].neighbors.includes('start-warrior'));
-    // 每条主干都有自己的基石
+    // 每条主干都有自己的基石，且每支 14 个节点（13 + 基石）
     for (const b of MAGE_BRANCHES) {
       assert.ok(MAGE_TALENT_BY_ID[`m-ks-${b.id}`], `缺少基石 ${b.id}`);
+      assert.equal(s.byBranch[b.id] + 1, 14, `${b.id} 主干应有 14 个节点`);
     }
+    assert.equal(s.byBranch.ring, 8, '4 内环 + 4 外环接缝');
+  });
+
+  test('几何与数据质量：短边 / 不交叉 / 近邻已连 / 统计键合法', () => {
+    const edges = [];
+    const seen = new Set();
+    for (const n of MAGE_TALENTS) {
+      for (const nb of n.neighbors) {
+        const key = n.id < nb ? `${n.id}|${nb}` : `${nb}|${n.id}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        edges.push([n, MAGE_TALENT_BY_ID[nb]]);
+      }
+    }
+    // 短边
+    for (const [a, b] of edges) {
+      const d = Math.hypot(a.x - b.x, a.y - b.y);
+      const ks = a.kind === 'keystone' || b.kind === 'keystone';
+      assert.ok(d <= (ks ? 165 : 175), `${a.id}~${b.id} 边长 ${d.toFixed(1)}`);
+    }
+    // 节点不贴脸
+    let minD = Infinity;
+    let pair = '';
+    for (let i = 0; i < MAGE_TALENTS.length; i++) {
+      for (let j = i + 1; j < MAGE_TALENTS.length; j++) {
+        const d = Math.hypot(MAGE_TALENTS[i].x - MAGE_TALENTS[j].x, MAGE_TALENTS[i].y - MAGE_TALENTS[j].y);
+        if (d < minD) { minD = d; pair = `${MAGE_TALENTS[i].id}/${MAGE_TALENTS[j].id}`; }
+      }
+    }
+    assert.ok(minD >= 20, `最近节点只隔 ${minD.toFixed(1)}px（${pair}）`);
+    // 近邻必须相连
+    for (const n of MAGE_TALENTS) {
+      for (const m of MAGE_TALENTS) {
+        if (m === n || n.neighbors.includes(m.id)) continue;
+        const d = Math.hypot(n.x - m.x, n.y - m.y);
+        assert.ok(d >= 25, `${n.id} 与 ${m.id} 只隔 ${d.toFixed(1)}px 却没连`);
+      }
+    }
+    // 不交叉 + 度数
+    const orient = (a, b, c) => Math.sign((b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x));
+    const crosses = (p1, p2, p3, p4) => {
+      const o1 = orient(p1, p2, p3), o2 = orient(p1, p2, p4);
+      const o3 = orient(p3, p4, p1), o4 = orient(p3, p4, p2);
+      return o1 !== o2 && o3 !== o4;
+    };
+    for (let i = 0; i < edges.length; i++) {
+      for (let j = i + 1; j < edges.length; j++) {
+        const [a, b] = edges[i], [c, d] = edges[j];
+        if (a.id === c.id || a.id === d.id || b.id === c.id || b.id === d.id) continue;
+        assert.ok(!crosses(a, b, c, d), `${a.id}~${b.id} × ${c.id}~${d.id} 交叉`);
+      }
+    }
+    for (const n of MAGE_TALENTS) assert.ok(n.neighbors.length <= 6, `${n.id} 度数 ${n.neighbors.length}`);
+    // 统计键：标准键或 core/mage.js 读取的 mage* 自定义字段
+    const custom = new Set([
+      'mageReactionMult', 'mageResonanceMult', 'mageMarkMax', 'mageAutoCastMult',
+      'mageEmpoweredMult', 'mageShieldMult', 'mageNovaRadius', 'mageNovaCdr',
+      'mageChainJumpBonus', 'mageReactionEcho', 'mageUltDuration', 'mageUltCdr',
+      'mageMeteor', 'mageMeteorRate', 'mageOrbs', 'mageTrinity', 'mageUltKillExtend',
+      'mageControlMult',
+    ]);
+    const allowed = new Set([...ITEM_STAT_KEYS, ...custom]);
+    for (const n of MAGE_TALENTS) {
+      for (const k of Object.keys(n.stats)) {
+        assert.ok(allowed.has(k), `${n.id}（${n.name}）使用了非法统计键 ${k}`);
+        assert.ok(Number.isFinite(n.stats[k]), `${n.id}.${k} 不是有限数字`);
+      }
+    }
+  });
+
+  test('旧存档清理：已删除的节点会被移除并自动退回天赋点', () => {
+    const { game } = makeMageGame(37);
+    game.world.player.talentPoints = 5;
+    game.inv.talents = [MAGE_START_NODE, 'm-fire-trunc', 'war-stem3', 'not-a-node'];
+    game.recalcPlayer();
+    assert.deepEqual(game.inv.talents, [MAGE_START_NODE, 'm-fire-trunc'], '无效节点应被清理');
+    assert.equal(game.inv.talentPoints, 4, '只花 1 点，剩余 4 点');
   });
 
   test('职业接入：法师用法师树，战士仍用战士树', () => {
@@ -176,7 +262,7 @@ describe('元素法师 · 专属天赋树', () => {
     assert.equal(r.lastError, null);
   });
 
-  test('天赋面板（纯绘制层）：法师树用 37 个节点 / 4 条主干渲染，tooltip 显示元素主干', async () => {
+  test('天赋面板（纯绘制层）：法师树用 70 个节点 / 4 条主干渲染，tooltip 显示元素主干', async () => {
     const { drawTalentMap, talentTooltipHTML } = await import('../src/ui/talent-ui.js');
     const ctx = makeStubCtx();
     const result = drawTalentMap(ctx, {
@@ -187,7 +273,7 @@ describe('元素法师 · 专属天赋树', () => {
       available: (t) => t && t.id === 'm-fire-hub',
       byId: MAGE_TALENT_BY_ID,
       nodes: MAGE_TALENTS,
-      ringRadii: [235, 395, 520],
+      ringRadii: [300, 425, 560],
       time: 1.2,
     });
     assert.equal(result.nodes, MAGE_TALENTS.length, '应画出全部法师节点');

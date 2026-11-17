@@ -12,18 +12,18 @@
 //   · 半径阶梯（RING_RADII，一条主干从里到外）：
 //       trunc 37（截断点，直接连起点）
 //         → hub 72（每支主干的入口枢纽）
-//           → stem1 122 → stem2 180 → stem3 235（直线主干）
-//             → stem4 / armL / armR 290（内环带：在此处分叉，左右各弯 ±22°）
+//           → stem1 122 → stem2 180（直线主干）
+//             → armL / armR 290（内环带：在此处左右分叉，各弯 ±22°）
 //               → upL / upR 372（中环带，继续沿 ±22° 向外）
-//                 → outerL / outerR / cap 448（外环带：左枝 +22°、右枝收窄到 +9°、主干正中的 cap）
+//                 → cap 448（外环带，主干正中的收束点）
 //                   → keystone 600（基石，只连 cap）
-//     SPOKE_RADII = [122, 180, 235, 290] 就是主干直线段用到的半径。
+//     SPOKE_RADII = [122, 180] 是主干直线段用到的半径。
 //
 //   · 内环接缝节点（ring-in-*，半径 290，branch 'ring'）：落在相邻两条主干之间的 6 个 60° 缺口
-//     （角度 60/0/-60/-120/-180/120），把相邻两条主干的 stem 连成"网格"，形成环形通路。
+//     （角度 60/0/-60/-120/-180/120），把相邻两条主干的 arm 连成"网格"，形成环形通路。
 //
-//   · 外环接缝节点（ring-out-*，半径 448，branch 'ring'）：每个缺口左右各偏 ±11.5° 两块，
-//     同样只连同半径、角距 8° 以内的邻点，于是外环变成「主干 cap ↔ 两块接缝 ↔ 下一支 cap」的链条。
+//   · 每条主干 10 个节点（trunc / hub / stem1 / stem2 / armL / armR / upL / upR / cap / keystone），
+//     6 条主干 + 6 个内环接缝 + 3 个传奇 + 1 起点 = **70 节点**，与法师树数量对齐。
 //
 //   · 传奇节点（kind 'legendary'，branch 'legendary'）：lg-fate(120°,200) / lg-kenji(60°,172) /
 //     lg-reap(0°,200)，挂在半径 110~175 的内圈区域，自动寻找最近的两个不同主干的节点连接，
@@ -61,11 +61,11 @@ export const BRANCHES = Object.freeze([
 
 /** 半径阶梯（见文件头布局说明）。 */
 export const RING_RADII = Object.freeze({
-  trunc: 37, hub: 72, stem1: 122, stem2: 180, stem3: 235, inner: 290, mid: 372, outer: 448,
+  trunc: 37, hub: 72, stem1: 122, stem2: 180, inner: 290, mid: 372, outer: 448,
 });
 
-/** 主干直线段使用的半径（stem1 / stem2 / stem3 / stem4）。 */
-export const SPOKE_RADII = Object.freeze([122, 180, 235, 290]);
+/** 主干直线段使用的半径（stem1 / stem2）。 */
+export const SPOKE_RADII = Object.freeze([122, 180]);
 
 /** 中心区半径。 */
 export const CENTER_RADII = Object.freeze({ trunc: 37 });
@@ -88,10 +88,6 @@ const TRUNC_STATS = {
 };
 /** 主干左右分叉的角度（度）。 */
 const ARM_BEND = 22;
-/** 外环右枝收窄的角度（度）。 */
-const CAP_BEND = 9;
-/** 外环接缝节点相对缺口角度的偏移（度）。 */
-const OUTER_JOINT_OFF = 11.5;
 /** hub 节点相对主干角度的偏移（度）。 */
 const HUB_OFFSET = 0;
 
@@ -164,10 +160,10 @@ function link(a, b) {
 const BY_ID = new Map();
 
 /**
- * 定义一条主干：hub → 3 段直线主干 → 内环带分叉 → 中环带 → 外环带 → cap → keystone。
+ * 定义一条主干：hub → 2 段直线主干 → 内环带分叉 → 中环带 → cap → keystone。
  * @param {string} branchId
- * @param {{hub:any, stem1:any, stem2:any, stem3:any, stem4:any, armL:any, armR:any,
- *          upL:any, upR:any, outerL:any, outerR:any, cap:any, keystone:any}} def
+ * @param {{hub:any, stem1:any, stem2:any, armL:any, armR:any,
+ *          upL:any, upR:any, cap:any, keystone:any}} def
  */
 function defineBranch(branchId, def) {
   const br = BRANCHES.find((b) => b.id === branchId);
@@ -178,14 +174,10 @@ function defineBranch(branchId, def) {
   const plan = [
     ['stem1', A, R.stem1, 1, def.stem1],
     ['stem2', A, R.stem2, 2, def.stem2],
-    ['stem3', A, R.stem3, 2, def.stem3],
-    ['stem4', A, R.inner, 3, def.stem4],
     ['armL', A - ARM_BEND, R.inner, 3, def.armL],
     ['armR', A + ARM_BEND, R.inner, 3, def.armR],
     ['upL', A - ARM_BEND, R.mid, 4, def.upL],
     ['upR', A + ARM_BEND, R.mid, 4, def.upR],
-    ['outerL', A - ARM_BEND, R.outer, 4, def.outerL],
-    ['outerR', A + CAP_BEND, R.outer, 4, def.outerR],
     ['cap', A, R.outer, 4, def.cap],
   ];
   for (const [suffix, angle, r, tier, nd] of plan) {
@@ -205,8 +197,8 @@ function defineBranch(branchId, def) {
   }
   const P = (s) => `${branchId}-${s}`;
   const EDGES = [
-    ['stem1', 'stem2'], ['stem2', 'stem3'], ['stem3', 'stem4'], ['stem4', 'armL'], ['stem4', 'armR'],
-    ['armL', 'upL'], ['upL', 'outerL'], ['armR', 'upR'], ['upR', 'outerR'], ['outerL', 'cap'], ['outerR', 'cap'],
+    ['stem1', 'stem2'], ['stem2', 'armL'], ['stem2', 'armR'],
+    ['armL', 'upL'], ['armR', 'upR'], ['upL', 'cap'], ['upR', 'cap'],
   ];
   for (const [a, b] of EDGES) link(P(a), P(b));
 
@@ -246,14 +238,10 @@ defineBranch('war', {
   hub: { name: '磨刀石', desc: '物理伤害 +5%', stats: { physDamageMult: 0.05 } },
   stem1: { name: '刀锋', desc: '物理伤害 +5%', stats: { physDamageMult: 0.05 } },
   stem2: { name: '挥砍', desc: '攻击速度 +3%', stats: { attackSpeedMult: 0.03 } },
-  stem3: { name: '破甲', desc: '物理伤害 +6%', stats: { physDamageMult: 0.06 } },
-  stem4: { name: '重刃', kind: 'notable', desc: '范围伤害 +10%', stats: { areaDamageMult: 0.1 } },
   armL: { name: '战争狂热', kind: 'notable', desc: '物理伤害 +12%', stats: { physDamageMult: 0.12 } },
   armR: { name: '横扫千军', desc: '范围效果 +6%', stats: { aoeMult: 0.06 } },
   upL: { name: '血战', desc: '物理伤害 +7%', stats: { physDamageMult: 0.07 } },
   upR: { name: '杀伐', desc: '范围伤害 +8%', stats: { areaDamageMult: 0.08 } },
-  outerL: { name: '斩尽杀绝', desc: '物理伤害 +8%', stats: { physDamageMult: 0.08 } },
-  outerR: { name: '战神降临', kind: 'notable', desc: '物理伤害 +18%，攻击速度 +5%', stats: { physDamageMult: 0.18, attackSpeedMult: 0.05 } },
   cap: { name: '末日裁决', kind: 'notable', desc: '全局伤害 +10%，物理伤害 +8%', stats: { damageMult: 0.1, physDamageMult: 0.08 } },
   keystone: {
     name: '不朽战神',
@@ -268,14 +256,10 @@ defineBranch('forge', {
   hub: { name: '铁壁', desc: '护甲 +30', stats: { armor: 30 } },
   stem1: { name: '壮硕', desc: '生命 +25', stats: { life: 25 } },
   stem2: { name: '石肤', desc: '护甲 +50', stats: { armor: 50 } },
-  stem3: { name: '筋骨', desc: '生命 +40', stats: { life: 40 } },
-  stem4: { name: '巨力之心', kind: 'notable', desc: '生命 +100', stats: { life: 100 } },
   armL: { name: '重甲', desc: '护甲 +80', stats: { armor: 80 } },
-  armR: { name: '钢铁之躯', desc: '护甲 +100', stats: { armor: 100 } },
+  armR: { name: '钢铁之躯', kind: 'notable', desc: '护甲 +100', stats: { armor: 100 } },
   upL: { name: '锻骨', desc: '生命 +70', stats: { life: 70 } },
   upR: { name: '铁衣', desc: '护甲 +120', stats: { armor: 120 } },
-  outerL: { name: '泰坦之力', kind: 'notable', desc: '护甲 +300，生命 +120', stats: { armor: 300, life: 120 } },
-  outerR: { name: '山岳', desc: '生命 +150', stats: { life: 150 } },
   cap: { name: '不灭壁垒', kind: 'notable', desc: '护甲 +350，格挡几率 +5%', stats: { armor: 350, blockChance: 0.05 } },
   keystone: {
     name: '不灭长城',
@@ -290,14 +274,10 @@ defineBranch('flame', {
   hub: { name: '火花', desc: '火焰伤害 +6%', stats: { fireDamageMult: 0.06 } },
   stem1: { name: '引燃', desc: '持续伤害 +6%', stats: { dotMult: 0.06 } },
   stem2: { name: '炽热', desc: '火焰伤害 +8%', stats: { fireDamageMult: 0.08 } },
-  stem3: { name: '爆燃', desc: '范围伤害 +8%', stats: { areaDamageMult: 0.08 } },
-  stem4: { name: '烈焰之心', kind: 'notable', desc: '火焰伤害 +15%', stats: { fireDamageMult: 0.15 } },
   armL: { name: '火山', desc: '范围效果 +6%', stats: { aoeMult: 0.06 } },
   armR: { name: '陨火', desc: '火焰伤害 +10%', stats: { fireDamageMult: 0.1 } },
   upL: { name: '余烬', desc: '火焰伤害 +9%', stats: { fireDamageMult: 0.09 } },
   upR: { name: '灼烧', desc: '持续伤害 +8%', stats: { dotMult: 0.08 } },
-  outerL: { name: '熔火化身', kind: 'notable', desc: '范围伤害 +20%', stats: { areaDamageMult: 0.2 } },
-  outerR: { name: '炎爆', desc: '附加火焰伤害 4-9', stats: { addedFireMin: 4, addedFireMax: 9 } },
   cap: { name: '焚世之火', kind: 'notable', desc: '火焰伤害 +15%，范围效果 +10%', stats: { fireDamageMult: 0.15, aoeMult: 0.1 } },
   keystone: {
     name: '焚世',
@@ -312,14 +292,10 @@ defineBranch('gale', {
   hub: { name: '怒气', desc: '攻击速度 +3%', stats: { attackSpeedMult: 0.03 } },
   stem1: { name: '精准', desc: '暴击率 +2%', stats: { critChance: 0.02 } },
   stem2: { name: '嗜血', desc: '暴击伤害 +10%', stats: { critMulti: 0.1 } },
-  stem3: { name: '狂暴', desc: '攻击速度 +4%', stats: { attackSpeedMult: 0.04 } },
-  stem4: { name: '狂怒之眼', kind: 'notable', desc: '暴击率 +5%', stats: { critChance: 0.05 } },
   armL: { name: '嗜杀', desc: '暴击伤害 +15%', stats: { critMulti: 0.15 } },
   armR: { name: '血怒', desc: '攻击速度 +5%', stats: { attackSpeedMult: 0.05 } },
   upL: { name: '疾锋', desc: '攻击速度 +4%', stats: { attackSpeedMult: 0.04 } },
   upR: { name: '锐利', desc: '暴击率 +3%', stats: { critChance: 0.03 } },
-  outerL: { name: '狂怒化身', kind: 'notable', desc: '暴击伤害 +30%', stats: { critMulti: 0.3 } },
-  outerR: { name: '血腥盛宴', desc: '生命偷取 +1%', stats: { lifeLeech: 0.01 } },
   cap: { name: '无尽愤怒', kind: 'notable', desc: '暴击率 +6%，攻击速度 +6%', stats: { critChance: 0.06, attackSpeedMult: 0.06 } },
   keystone: {
     name: '无限狂怒',
@@ -334,14 +310,10 @@ defineBranch('death', {
   hub: { name: '幸运', desc: '物品稀有度 +8%', stats: { rarityBonus: 0.08 } },
   stem1: { name: '敏锐', desc: '冷却缩减 +2%', stats: { cdrMult: 0.02 } },
   stem2: { name: '拾荒者', desc: '物品数量 +6%', stats: { quantityBonus: 0.06 } },
-  stem3: { name: '求知', desc: '获得经验 +8%', stats: { xpBonus: 0.08 } },
-  stem4: { name: '命运之手', kind: 'notable', desc: '物品稀有度 +20%', stats: { rarityBonus: 0.2 } },
   armL: { name: '时之沙', desc: '冷却缩减 +3%', stats: { cdrMult: 0.03 } },
   armR: { name: '幸运符', desc: '物品数量 +10%', stats: { quantityBonus: 0.1 } },
   upL: { name: '祭品', desc: '物品稀有度 +12%', stats: { rarityBonus: 0.12 } },
   upR: { name: '冥思', desc: '冷却缩减 +3%', stats: { cdrMult: 0.03 } },
-  outerL: { name: '命运织者', kind: 'notable', desc: '获得经验 +20%', stats: { xpBonus: 0.2 } },
-  outerR: { name: '天命之选', desc: '物品稀有度 +15%', stats: { rarityBonus: 0.15 } },
   cap: { name: '时运主宰', kind: 'notable', desc: '物品稀有度 +30%，冷却缩减 +8%', stats: { rarityBonus: 0.3, cdrMult: 0.08 } },
   keystone: {
     name: '命运的赌徒',
@@ -356,14 +328,10 @@ defineBranch('fate', {
   hub: { name: '轻功', desc: '闪避率 +2%', stats: { evasion: 0.02 } },
   stem1: { name: '韧性', desc: '每秒回复 1 点生命', stats: { lifeRegen: 1 } },
   stem2: { name: '疾影', desc: '闪避率 +3%', stats: { evasion: 0.03 } },
-  stem3: { name: '生机', desc: '生命 +30', stats: { life: 30 } },
-  stem4: { name: '守卫之心', kind: 'notable', desc: '闪避率 +6%', stats: { evasion: 0.06 } },
   armL: { name: '回春', desc: '每秒回复 1.5 点生命', stats: { lifeRegen: 1.5 } },
   armR: { name: '迅捷', desc: '移动速度 +4%', stats: { moveSpeedMult: 0.04 } },
   upL: { name: '守序', desc: '每秒回复生命 +1.5', stats: { lifeRegen: 1.5 } },
   upR: { name: '清风', desc: '闪避率 +4%', stats: { evasion: 0.04 } },
-  outerL: { name: '风之守护', kind: 'notable', desc: '闪避率 +8%，移动速度 +8%', stats: { evasion: 0.08, moveSpeedMult: 0.08 } },
-  outerR: { name: '壁垒', desc: '格挡几率 +3%', stats: { blockChance: 0.03 } },
   cap: { name: '永恒守护', kind: 'notable', desc: '格挡几率 +8%，每秒回复 3 点生命', stats: { blockChance: 0.08, lifeRegen: 3 } },
   keystone: {
     name: '不动如山',
@@ -425,7 +393,7 @@ function ringJoint(id, name, angle, r, desc, stats, tier, maxDiff, minDiff) {
   return self;
 }
 
-// 内环接缝（半径 290）：缺口正中，连上相邻两条主干的 stem 系列
+// 内环接缝（半径 290）：缺口正中，连上相邻两条主干的 arm 系列
 const INNER_JOINTS = [
   { id: 'ring-in-0', gap: 0, name: '战阵', desc: '护甲 +40', stats: { armor: 40 } },
   { id: 'ring-in-1', gap: 1, name: '淬火', desc: '火焰抗性 +6%', stats: { fireResist: 0.06 } },
@@ -436,25 +404,6 @@ const INNER_JOINTS = [
 ];
 for (const j of INNER_JOINTS) {
   ringJoint(j.id, j.name, GAPS[j.gap], RING_RADII.inner, j.desc, j.stats, 3, 7.5, 6.5);
-}
-
-// 外环接缝（半径 448）：每个缺口左右各一块，连上相邻主干的 cap
-const OUTER_JOINTS = [
-  { id: 'ring-out-0a', gap: 0, off: -OUTER_JOINT_OFF, name: '战鼓', desc: '范围伤害 +6%', stats: { areaDamageMult: 0.06 } },
-  { id: 'ring-out-0b', gap: 0, off: OUTER_JOINT_OFF, name: '熔炉余温', desc: '生命 +40', stats: { life: 40 } },
-  { id: 'ring-out-1a', gap: 1, off: -OUTER_JOINT_OFF, name: '灼热之血', desc: '火焰伤害 +8%', stats: { fireDamageMult: 0.08 } },
-  { id: 'ring-out-1b', gap: 1, off: OUTER_JOINT_OFF, name: '灰烬', desc: '附加火焰 3-5', stats: { addedFireMin: 3, addedFireMax: 5 } },
-  { id: 'ring-out-2a', gap: 2, off: -OUTER_JOINT_OFF, name: '烈焰回响', desc: '范围效果 +6%', stats: { aoeMult: 0.06 } },
-  { id: 'ring-out-2b', gap: 2, off: OUTER_JOINT_OFF, name: '腾挪', desc: '闪避率 +4%', stats: { evasion: 0.04 } },
-  { id: 'ring-out-3a', gap: 3, off: -OUTER_JOINT_OFF, name: '猎手', desc: '攻击速度 +4%', stats: { attackSpeedMult: 0.04 } },
-  { id: 'ring-out-3b', gap: 3, off: OUTER_JOINT_OFF, name: '疾影', desc: '暴击率 +3%', stats: { critChance: 0.03 } },
-  { id: 'ring-out-4a', gap: 4, off: -OUTER_JOINT_OFF, name: '生机', desc: '生命 +80', stats: { life: 80 } },
-  { id: 'ring-out-4b', gap: 4, off: OUTER_JOINT_OFF, name: '献祭', desc: '技能等级 +1', stats: { skillLevelBonus: 1 } },
-  { id: 'ring-out-5a', gap: 5, off: -OUTER_JOINT_OFF, name: '时间裂隙', desc: '冷却缩减 +4%', stats: { cdrMult: 0.04 } },
-  { id: 'ring-out-5b', gap: 5, off: OUTER_JOINT_OFF, name: '寻宝者', desc: '物品稀有度 +15%', stats: { rarityBonus: 0.15 } },
-];
-for (const j of OUTER_JOINTS) {
-  ringJoint(j.id, j.name, GAPS[j.gap] + j.off, RING_RADII.outer, j.desc, j.stats, 4, 8, 0);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

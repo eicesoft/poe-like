@@ -5,7 +5,12 @@ import { SpatialHash } from '../engine/spatial.js';
 import {
   createInventory, equipStats, talentStats, equipItem, unequipItem, addToBag,
   nearestDrop, pickupDrop, bagFull, sortBag, sellItem, EQUIP_SLOTS, SLOT_ACCEPTS,
+  depositToStash, withdrawFromStash,
 } from './inventory.js';
+import {
+  nearestHomeInteractable, merchantStock, merchantPrice,
+  buyMerchantItem, gamble,
+} from './home.js';
 import { createPlayer, updateCore, createClassBaseStats } from '../core/index.js';
 import { recalcStats, createBaseStats as coreBaseStats } from '../core/stats.js';
 import { tryDash, tryBasicAttack, tryCast, releaseChannel, isChanneling } from '../core/skills.js';
@@ -99,7 +104,7 @@ export function createGame(opts = {}) {
   // [Lead 修复] 之前 world.all.push(player) 发生在 loadMap 之前，而 loadMap 会清空 world.all，
   // 导致玩家永远不在 world.all 里（渲染层 z 排序/阴影只遍历 world.all → 玩家与部分实体不同步，
   // 传入 world.all 的哈希/查询也会漏掉玩家）。改为换图后再统一登记，并在 loadMap 里保证包含玩家。
-  loadMap(world, { tier: opts.tier ?? 1 });
+  loadMap(world, { tier: opts.tier ?? 0 });
   player.x = world.dungeon.playerStart.x;
   player.z = world.dungeon.playerStart.z;
 
@@ -112,13 +117,37 @@ export function createGame(opts = {}) {
     return talentTreeFor(player.type);
   }
 
+  /**
+   * 清理已点天赋：丢掉当前树里不存在的 id（旧版本节点被删除时），并去重。
+   * 不强制检查连通性——旧存档里可能保留了跨越已删除节点的合法节点，
+   * 它们仍然提供属性，玩家可以自行撤回；只保证起点永远存在且排在最前。
+   * @param {any[]} list
+   * @param {any} tree
+   * @returns {any[]}
+   */
+  function sanitizeAllocatedTalents(list, tree) {
+    const out = [tree.start];
+    const seen = new Set(out);
+    if (Array.isArray(list)) {
+      for (const id of list) {
+        if (typeof id !== 'string' || seen.has(id) || !tree.byId[id]) continue;
+        seen.add(id);
+        out.push(id);
+      }
+    }
+    return out;
+  }
+
   function recalcPlayer() {
     const tree = activeTalentTree();
     game.talentTree = tree;
-    // 旧存档 / 换职业后可能残留另一棵树的节点：起点不对就重置为该职业起点。
-    // （旧版法师存档从来没有花过天赋点，所以重置不会吞掉玩家的点数。）
-    if (!Array.isArray(inv.talents) || !inv.talents.includes(tree.start)) {
-      inv.talents = [tree.start];
+    // 旧存档 / 换职业 / 天赋树改版后可能残留无效节点：统一清理并补回起点。
+    // 清理后少掉的已花点数会通过 __syncTalentPoints 自动退回。
+    const cleaned = sanitizeAllocatedTalents(inv.talents, tree);
+    const same = Array.isArray(inv.talents) && cleaned.length === inv.talents.length
+      && cleaned.every((id, i) => inv.talents[i] === id);
+    if (!same) {
+      inv.talents = cleaned;
       if (typeof world.__syncTalentPoints === 'function') world.__syncTalentPoints();
     }
     player.talentStats = talentStats(inv, tree.byId);
@@ -590,6 +619,19 @@ const RARITY_LABEL = { normal: '普通', magic: '魔法', rare: '稀有', unique
 export function doPickup(game) {
   const world = game.world;
   const p = world.player;
+  // 庇护所：F 是「互动键」——靠近仓库/商人/赌徒打开对应面板，靠近战斗之门开启战斗地图。
+  // 只在 isHome 时生效，战斗地图上的 F 仍然是拾取（老行为，测试也覆盖）。
+  if (world.map && world.map.isHome) {
+    const target = nearestHomeInteractable(world, p.x, p.z, 3.2);
+    if (target) {
+      if (target.kind === 'portal') {
+        game.ui?.closeModals?.();
+        return leaveCurrentMap(game);
+      }
+      game.ui?.showHomePanel?.(target.kind);
+      return target;
+    }
+  }
   const drop = nearestDrop(world, p.x, p.z, 2.4);
   if (!drop) {
     game.ui?.toast?.('附近没有可拾取的物品');
@@ -672,6 +714,70 @@ export function doSellAllJunk(game) {
   game.ui?.onInventoryChange?.();
   game.ui?.toast?.(`分解 ${n} 件，获得 ${total} 金币`);
   return total;
+}
+
+// ---------------------------------------------------------------------------
+// 庇护所交互：仓库 / 商人 / 赌徒（逻辑在 game/home.js，这里补 UI 反馈与重算）
+// ---------------------------------------------------------------------------
+
+/** 背包第 idx 件存入仓库 */
+export function doStashDeposit(game, idx) {
+  const item = game.inv.bag[idx];
+  if (!item) return null;
+  const moved = depositToStash(game.inv, idx);
+  if (!moved) {
+    game.ui?.toast?.('仓库已满');
+    return null;
+  }
+  game.ui?.onInventoryChange?.();
+  game.ui?.toast?.(`已存入仓库：${moved.name}`, moved.color);
+  return moved;
+}
+
+/** 仓库第 idx 件取回背包 */
+export function doStashWithdraw(game, idx) {
+  const item = game.inv.stash && game.inv.stash[idx];
+  if (!item) return null;
+  const moved = withdrawFromStash(game.inv, idx);
+  if (!moved) {
+    game.ui?.toast?.('背包已满');
+    return null;
+  }
+  game.ui?.onInventoryChange?.();
+  game.ui?.toast?.(`已取出：${moved.name}`, moved.color);
+  return moved;
+}
+
+/** 购买商人库存第 idx 件 */
+export function doBuyMerchantItem(game, idx) {
+  const item = merchantStock(game.world)[idx];
+  const price = item ? merchantPrice(item) : 0;
+  const r = buyMerchantItem(game, idx);
+  if (!r.ok) {
+    if (r.reason === 'gold') game.ui?.toast?.(`金币不足（需要 ${price}）`, '#ff6a5a');
+    else if (r.reason === 'bag') game.ui?.toast?.('背包已满');
+    return r;
+  }
+  game.ui?.onInventoryChange?.();
+  game.ui?.toast?.(`购买 ${r.item.name}（-${r.price} 金币）`, r.item.color || '#c8a25a');
+  return r;
+}
+
+/** 赌徒：支付金币翻一件装备 */
+export function doGamble(game) {
+  const r = gamble(game);
+  if (!r.ok) {
+    if (r.reason === 'gold') game.ui?.toast?.(`金币不足（赌注 ${r.cost}）`, '#ff6a5a');
+    else if (r.reason === 'bag') game.ui?.toast?.('背包已满');
+    return r;
+  }
+  if (r.item) {
+    game.ui?.toast?.(`赌徒翻出 ${r.item.name}（赌注 ${r.cost}）`, r.item.color || '#ffd34d');
+    game.ui?.onInventoryChange?.();
+  } else {
+    game.ui?.toast?.(`赌徒摊开手：什么也没有…（赌注 ${r.cost}）`, '#9a9a9a');
+  }
+  return r;
 }
 
 /**
@@ -1043,11 +1149,12 @@ export function pushGameEvent(game, type, payload = {}) {
   if (world.events.length > 600) world.events.splice(0, world.events.length - 600);
 }
 
-/** 重开一张新地图（回城/新图循环） */
-export function travelToNewMap(game, tierDelta = 0) {
+/**
+ * 换图前把地上剩余掉落收进背包（背包满则折算金币），避免换图丢东西。
+ * @param {object} game
+ */
+function sweepLootForTravel(game) {
   const world = game.world;
-  const p = world.player;
-  // 换图前：把地上剩下的稀有/传奇掉落收进背包（POE 里玩家自己去捡；这里救急防止数据丢失）
   for (let i = world.items.length - 1; i >= 0; i--) {
     const d = world.items[i];
     if (!d || !d.item) continue;
@@ -1061,9 +1168,28 @@ export function travelToNewMap(game, tierDelta = 0) {
     }
   }
   for (const o of world.lootOrbs) if (o && o.kind === 'gold') game.inv.gold += o.value || 0;
-  world.career.mapsCleared++;
-  world.career.bestTier = Math.max(world.career.bestTier, world.tier);
-  const tier = Math.max(1, world.tier + 1 + tierDelta);
+}
+
+/**
+ * 庇护所 → 战斗地图。
+ * 从战斗地图调用时（旧行为）进入更深一层；从家进入时使用 homeNextTier（离开战斗地图时记住的层数）。
+ * 家地图 tier 0 不参与层数递增。
+ */
+export function travelToNewMap(game, tierDelta = 0) {
+  const world = game.world;
+  const p = world.player;
+  sweepLootForTravel(game);
+  const fromHome = !!(world.map && world.map.isHome);
+  let tier;
+  if (fromHome) {
+    tier = Math.max(1, Math.floor(Number(world.homeNextTier) || 1) + Math.max(0, tierDelta | 0));
+  } else {
+    world.career.mapsCleared++;
+    world.career.bestTier = Math.max(world.career.bestTier, world.tier);
+    tier = Math.max(1, world.tier + 1 + tierDelta);
+  }
+  // 记住下次从家门出去该去第几层
+  world.homeNextTier = tier;
   if (!p.dead) {
     // 回城恢复
     p.hp = p.maxHp;
@@ -1071,6 +1197,69 @@ export function travelToNewMap(game, tierDelta = 0) {
   }
   loadMap(world, { tier });
   game.recalcPlayer();
+  game.ui?.onInventoryChange?.();
+  game.ui?.onMapChange?.();
+  return world.map;
+}
+
+/**
+ * 战斗地图 → 庇护所（不结算“通关”，但会记住下一层的层数）。
+ * 会先把地上掉落收进背包、回满血蓝，然后进入 tier 0 的安全大厅。
+ * @param {object} game
+ * @param {{advance?:boolean}} [opts] advance=true：主动回城，下一趟从当前层 +1 开始；
+ *   false：死亡/撤退，下一趟重打当前层。
+ */
+export function returnToHome(game, { advance = false } = {}) {
+  const world = game.world;
+  const p = world.player;
+  const wasHome = !!(world.map && world.map.isHome);
+  sweepLootForTravel(game);
+  if (!wasHome) {
+    const cur = Math.max(1, world.tier || world.homeNextTier || 1);
+    world.homeNextTier = advance ? cur + 1 : cur;
+  }
+  if (!p.dead) {
+    p.hp = p.maxHp;
+    p.mp = p.maxMp;
+  }
+  loadMap(world, { tier: 0 });
+  game.recalcPlayer();
+  game.ui?.onInventoryChange?.();
+  game.ui?.onMapChange?.();
+  game.ui?.toast?.(advance ? '回到庇护所 · 下一趟可前往更深一层' : '回到庇护所 · 补给与整备', '#c8a25a');
+  return world.map;
+}
+
+/**
+ * T / 技能栏 🏕 / 战斗之门共用的「离开当前地图」：
+ *   家 → 开启战斗地图；战斗地图 → 回庇护所（下次从更深一层开始）。
+ */
+export function leaveCurrentMap(game) {
+  const world = game.world;
+  if (world.map && world.map.isHome) return travelToNewMap(game);
+  return returnToHome(game, { advance: true });
+}
+
+/** 死亡后回庇护所复活（保留原地复活函数，方便测试与特殊玩法） */
+export function reviveAtHome(game) {
+  revivePlayer(game);
+  return returnToHome(game, { advance: false });
+}
+
+/**
+ * 开局 / 读档统一入口：**永远先落到庇护所**，再由玩家穿过战斗之门开启战斗。
+ * @param {object} game
+ * @param {number} [resumeTier] 历史进度层数；>0 时战斗之门会直接通往该层。
+ *   传 0 / 省略时保留当前 world.homeNextTier（至少 1）。
+ * @returns {object} 庇护所地图
+ */
+export function enterHome(game, resumeTier = 0) {
+  const world = game.world;
+  const tier = Math.max(0, Math.floor(Number(resumeTier) || 0));
+  if (tier > 0) world.homeNextTier = tier;
+  else if (!(Number(world.homeNextTier) > 0)) world.homeNextTier = 1;
+  loadMap(world, { tier: 0 });
+  game.recalcPlayer?.();
   game.ui?.onInventoryChange?.();
   game.ui?.onMapChange?.();
   return world.map;

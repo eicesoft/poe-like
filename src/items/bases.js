@@ -234,6 +234,20 @@ const WEAPONS = [
   B({ id: 'infernal_cleaver', name: '狱火劈刃', slot: 'weapon', tier: 4, levelReq: 34, icon: '🔥', element: 'fire',
     baseStats: { dmgMin: 40, dmgMax: 74, attackSpeedMult: -0.04, critChance: 0.07, critMulti: 1.4, physDamageMult: 0.1 },
     implicitText: '+10% 物理伤害', tags: ['melee', 'axe', 'twohand'] }),
+
+  // ── 法师武器（caster）：伤害略低于同阶近战，但自带法力 / 元素伤害，直接放大法术循环 ──
+  B({ id: 'apprentice_wand', name: '学徒魔杖', slot: 'weapon', tier: 1, levelReq: 1, icon: '🪄',
+    baseStats: { dmgMin: 5, dmgMax: 9, attackSpeedMult: 0.18, critChance: 0.06, critMulti: 1.1, mana: 12, manaRegen: 0.4 },
+    implicitText: '+12 法力，+18% 攻击速度', tags: ['caster', 'wand', 'onehand'] }),
+  B({ id: 'runed_wand', name: '符文魔杖', slot: 'weapon', tier: 2, levelReq: 9, icon: '🪄', element: 'lightning',
+    baseStats: { dmgMin: 12, dmgMax: 20, attackSpeedMult: 0.12, critChance: 0.06, critMulti: 1.2, mana: 22, manaRegen: 0.8, lightningDamageMult: 0.08 },
+    implicitText: '+22 法力，+8% 闪电伤害', tags: ['caster', 'wand', 'onehand'] }),
+  B({ id: 'frost_staff', name: '霜语法杖', slot: 'weapon', tier: 3, levelReq: 18, icon: '❄️', element: 'cold',
+    baseStats: { dmgMin: 22, dmgMax: 38, attackSpeedMult: -0.02, critChance: 0.07, critMulti: 1.25, mana: 32, manaRegen: 1.2, coldDamageMult: 0.12 },
+    implicitText: '+32 法力，+12% 冰霜伤害', tags: ['caster', 'staff', 'twohand'] }),
+  B({ id: 'archmage_staff', name: '大法师法杖', slot: 'weapon', tier: 4, levelReq: 28, icon: '🔮', element: 'fire',
+    baseStats: { dmgMin: 34, dmgMax: 60, attackSpeedMult: -0.06, critChance: 0.08, critMulti: 1.3, mana: 50, manaRegen: 1.8, damageMult: 0.1 },
+    implicitText: '+50 法力，+10% 全局伤害', tags: ['caster', 'staff', 'twohand'] }),
 ];
 
 // ---------------------------------------------------------------------------
@@ -254,6 +268,8 @@ const HELMETS = [
     baseStats: { armor: 40, critChance: 0.02, thorns: 9 }, implicitText: '+40 护甲，+2% 暴击率' }),
   B({ id: 'titan_crown', name: '巨神之冠', slot: 'helmet', tier: 4, levelReq: 28, icon: '👑',
     baseStats: { armor: 78, energyShield: 20, life: 20 }, implicitText: '+78 护甲，+20 生命' }),
+  B({ id: 'arcane_hood', name: '秘法兜帽', slot: 'helmet', tier: 3, levelReq: 17, icon: '🧙',
+    baseStats: { armor: 12, energyShield: 40, mana: 22, manaRegen: 1 }, implicitText: '+40 能量护盾，+22 法力' }),
 ];
 
 // ---------------------------------------------------------------------------
@@ -276,6 +292,11 @@ const BODIES = [
     baseStats: { armor: 130, fireResist: 0.1 }, implicitText: '+130 护甲，+10% 火焰抗性' }),
   B({ id: 'warlord_plate', name: '战王铠甲', slot: 'body', tier: 4, levelReq: 33, icon: '🏛️',
     baseStats: { armor: 168, life: 30, energyShield: 16 }, implicitText: '+168 护甲，+30 生命' }),
+  // ── 法师法袍：低护甲、高能量护盾 / 法力，给元素法师堆护盾与续航 ──
+  B({ id: 'apprentice_robe', name: '学徒法袍', slot: 'body', tier: 1, levelReq: 1, icon: '🥼',
+    baseStats: { armor: 4, energyShield: 16, mana: 12 }, implicitText: '+16 能量护盾，+12 法力' }),
+  B({ id: 'archmage_robe', name: '大法师法袍', slot: 'body', tier: 4, levelReq: 28, icon: '🧥',
+    baseStats: { armor: 18, energyShield: 100, mana: 45, manaRegen: 1.5 }, implicitText: '+100 能量护盾，+45 法力' }),
 ];
 
 // ---------------------------------------------------------------------------
@@ -292,6 +313,8 @@ const GLOVES = [
     baseStats: { armor: 24, attackSpeedMult: 0.05 }, implicitText: '+5% 攻击速度' }),
   B({ id: 'executioner_grips', name: '处刑者之握', slot: 'gloves', tier: 4, levelReq: 26, icon: '🩸',
     baseStats: { armor: 34, critMulti: 0.15, attackSpeedMult: 0.04 }, implicitText: '+15% 暴击伤害加成' }),
+  B({ id: 'silk_wraps', name: '秘丝手套', slot: 'gloves', tier: 2, levelReq: 10, icon: '🧤',
+    baseStats: { armor: 6, energyShield: 18, mana: 15, cdrMult: 0.03 }, implicitText: '+18 能量护盾，+3% 冷却缩减' }),
 ];
 
 // ---------------------------------------------------------------------------
@@ -378,10 +401,12 @@ const BELTS = [
     baseStats: { life: 34, lifeRegen: 1.5 }, implicitText: '+34 生命，每秒回复 1.5 点生命' }),
   B({ id: 'girdle_of_power', name: '伟力巨带', slot: 'belt', tier: 4, levelReq: 28, icon: '💪',
     baseStats: { life: 52, armor: 30, lifeLeech: 0.01 }, implicitText: '+52 生命' }),
+  B({ id: 'silk_sash', name: '秘丝腰带', slot: 'belt', tier: 3, levelReq: 18, icon: '🎗️',
+    baseStats: { energyShield: 30, mana: 25, manaRegen: 1, chaosResist: 0.05 }, implicitText: '+30 能量护盾，+25 法力' }),
 ];
 
 /**
- * 全部基底物品（39 个）。**这是唯一的权威数据源**，itemgen / UI 都从这里查。
+ * 全部基底物品（70 个：17 把武器 + 53 件防具 / 饰品）。**这是唯一的权威数据源**，itemgen / UI 都从这里查。
  * @type {ReadonlyArray<BaseItem>}
  */
 export const BASE_ITEMS = Object.freeze([
@@ -460,10 +485,14 @@ export function pickBase(rng, equipSlot, level) {
     cands = pool.filter((b) => b.levelReq === minReq);
   }
   // 权重：阶位越低越常见；等级越接近基底需求，越容易出高阶。
+  // [掉落调整] 高阶基底（T3/T4）的等级成长从固定 0.15/级 提高为「阶位越高成长越快」，
+  // 并给 T3/T4 额外 50% 权重：深层地图里高阶基底明显更常见，而不是永远被 T1 压住。
   // 副手（offhand）里盾牌占 85%，双手武器只占 15%，符合「盾战」为主的观感。
   const offhandMixed = equipSlot === 'offhand' && cands.some((b) => b.slot === 'shield') && cands.some((b) => b.slot === 'weapon');
   const weighted = cands.map((b) => {
-    let w = (5 - b.tier) + Math.max(0, lv - b.levelReq) * 0.15;
+    const gap = Math.max(0, lv - b.levelReq);
+    const highTier = b.tier >= 3 ? 1.5 : 1;
+    let w = (5 - b.tier) * highTier + gap * (0.12 + 0.08 * (b.tier - 1));
     if (offhandMixed) w *= b.slot === 'shield' ? 0.85 : 0.15;
     return { weight: w, base: b };
   });

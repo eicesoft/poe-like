@@ -230,6 +230,13 @@ export function updateSpawner(world, dt) {
   if (!world) return;
   if (!world.stats || !world.stats.spawnerReady) initSpawner(world);
   const st = world.stats;
+  // 庇护所（家）：安全区，永不刷怪（波次 / Boss 计时也一并冻结）。
+  if (world.map && world.map.isHome) {
+    st.aliveCount = countAlive(world);
+    st.aliveCap = 0;
+    st.bossAlive = false;
+    return;
+  }
   const player = world.player;
   if (world.over || (player && player.dead)) {
     // 玩家死亡后停止刷怪（保留已有怪物）

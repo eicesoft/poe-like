@@ -62,11 +62,14 @@ export {
 // ── 天赋树选择器（按职业） ──
 export { talentTreeFor, talentNodesOf, talentStartOf, WARRIOR_TALENT_TREE, MAGE_TALENT_TREE } from './talentTrees.js';
 
-// ── 技能树 ──
+// ── 技能树（战士 5 + 法师 5） ──
 export {
   SKILL_TREES, SKILL_IDS, SKILL_NODES, SKILL_NODE_BY_ID,
   skillNodeById, skillTreeOf, skillEffectsForSkill, skillPointsSpent, canUpgradeSkillNode,
 } from './skillTree.js';
+
+// ── 法师技能分叉树数据 ──
+export { MAGE_SKILL_TREE_IDS, MAGE_SKILL_TREE_SPECS } from './mageSkillTrees.js';
 
 import { itemScore, itemStatLines } from './itemgen.js';
 

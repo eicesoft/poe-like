@@ -537,10 +537,10 @@ export function openTalents(ui) {
   for (const t of tree.nodes || []) if (t && t.id) { byId[t.id] = t; allNodes.push(t); }
   const treeBranches = Array.isArray(tree.branches) ? tree.branches : [];
 
-  // 背景参考环：按树的最大半径生成（战士 290/448/600，法师 235/395/520）。
+  // 背景参考环：按树的最大半径生成（战士 290/448/600，法师 300/425/560）。
   let maxR = 0;
   for (const t of allNodes) maxR = Math.max(maxR, num(t.radius, 0));
-  const ringRadii = tree.id === 'mage' ? [235, 395, Math.max(520, maxR)] : [290, 448, Math.max(600, maxR)];
+  const ringRadii = tree.id === 'mage' ? [300, 425, Math.max(560, maxR)] : [290, 448, Math.max(600, maxR)];
 
   // -- 4.1 DOM 骨架 ---------------------------------------------------------
   const wrap = el('div', { class: 'talent-wrap' });

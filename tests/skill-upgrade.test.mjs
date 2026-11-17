@@ -618,12 +618,17 @@ describe('技能等级（契约 §0 / §2.2 / §3.4）', () => {
 // 4. 分叉与互斥
 // ===========================================================================
 describe('分叉天赋与互斥（契约 §3.1 / §3.2）', () => {
-  test('skillTree.js 导出新的互斥 API；5 棵树都叫 stomp/whirlwind/warcry/bloodRage/rally', async () => {
+  test('skillTree.js 导出新的互斥 API；战士 5 棵 + 法师 5 棵技能树', async () => {
     const m = await load('../src/items/skillTree.js');
     for (const fn of ['skillNodeConflict', 'skillBranchOf', 'validateSkillRanks', 'skillEffectsForSkill']) {
       assert.equal(typeof m[fn], 'function', `缺少导出 ${fn}`);
     }
-    assert.deepEqual([...m.SKILL_IDS].sort(), ['bloodRage', 'rally', 'stomp', 'warcry', 'whirlwind']);
+    assert.deepEqual([...m.SKILL_IDS].sort(), [
+      'bloodRage', 'mageArc', 'mageFirebolt', 'mageIceShard', 'magePyro',
+      'mageUltimate', 'rally', 'stomp', 'warcry', 'whirlwind',
+    ]);
+    assert.equal(m.SKILL_TREES.stomp.classId, 'warrior');
+    assert.equal(m.SKILL_TREES.mageFirebolt.classId, 'mage');
     assert.ok(!m.SKILL_TREES.groundSlam, 'groundSlam 树必须被移除');
   });
 

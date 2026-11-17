@@ -399,6 +399,59 @@ export class Renderer {
         try { this._playMageTrinity(evt, x, z); } catch (err) { this._warnEvent('mageTrinity', err); }
         break;
       }
+      // ── 元素法师技能树：余烬 / 凤凰 / 冰爆 / 冰域 / 跳弧 / 雷暴 / 陨雨 / 岩浆 / 奇点 ──
+      case 'mageEmberBurst': {
+        try { this._playMageEmberBurst(x, z, evt); } catch (err) { this._warnEvent('mageEmberBurst', err); }
+        break;
+      }
+      case 'magePhoenix': {
+        try { this._playMagePhoenix(x, z, evt); } catch (err) { this._warnEvent('magePhoenix', err); }
+        break;
+      }
+      case 'mageFrostBurst': {
+        try { this._playMageFrostBurst(x, z, evt); } catch (err) { this._warnEvent('mageFrostBurst', err); }
+        break;
+      }
+      case 'mageIceField': {
+        try { this._playMageIceField(x, z, evt); } catch (err) { this._warnEvent('mageIceField', err); }
+        break;
+      }
+      case 'mageIceArmor': {
+        try { this._playMageIceArmor(x, z, evt); } catch (err) { this._warnEvent('mageIceArmor', err); }
+        break;
+      }
+      case 'mageArcJump': {
+        try { this._playMageArcJump(evt, x, z); } catch (err) { this._warnEvent('mageArcJump', err); }
+        break;
+      }
+      case 'mageArcHaste': {
+        try { this._playMageArcHaste(x, z, evt); } catch (err) { this._warnEvent('mageArcHaste', err); }
+        break;
+      }
+      case 'mageThunder': {
+        try { this._playMageThunder(x, z, evt); } catch (err) { this._warnEvent('mageThunder', err); }
+        break;
+      }
+      case 'mageMeteorRain': {
+        try { this._playMageMeteorRain(x, z, evt); } catch (err) { this._warnEvent('mageMeteorRain', err); }
+        break;
+      }
+      case 'mageDoubleDetonate': {
+        try { this._playMageDoubleDetonate(x, z, evt); } catch (err) { this._warnEvent('mageDoubleDetonate', err); }
+        break;
+      }
+      case 'mageCataclysm': {
+        try { this._playMageCataclysm(x, z, evt); } catch (err) { this._warnEvent('mageCataclysm', err); }
+        break;
+      }
+      case 'mageLava': {
+        try { this._playMageLava(x, z, evt); } catch (err) { this._warnEvent('mageLava', err); }
+        break;
+      }
+      case 'mageSingularity': {
+        try { this._playMageSingularity(x, z, evt); } catch (err) { this._warnEvent('mageSingularity', err); }
+        break;
+      }
       case 'whirl': {
         // [Lead 修复] 只同步半径；旋转/停止完全由 player.whirlspinning 驱动，
         // 不再用事件设置"余晖"，否则松手后画面会残留一段刀光。
@@ -659,7 +712,24 @@ export class Renderer {
       case 'fireNova':
       case 'iceNova': {
         const h2 = id === 'iceNova' ? 195 : 20;
-        this.shockwave(x, z, h2, { radius: evt.radius ?? 3.5, dur: 0.55, count: 36 });
+        const r = evt.radius ?? 3.5;
+        this.shockwave(x, z, h2, { radius: r, dur: 0.55, count: 36 });
+        // 元素狂潮的溅射：每次命中都叠一圈三色星火，洪流天赋再放大一圈
+        if (evt.ultSplash) {
+          const hues = [24, 195, 55, 280];
+          this.effects.disk(x, z, {
+            r1: r, dur: 0.32, hue: evt.hue ?? 280, sat: 94, light: 66,
+            alpha: 0.22, core: 0.14, rim: 0.7,
+          });
+          for (let i = 0; i < hues.length; i++) {
+            P.spawnBurstRing(x, z, {
+              count: evt.torrent ? 10 : 6, radius: r * (0.25 + i * 0.16), jitter: 0.3,
+              speedMin: 1.6, speedMax: 5.5, up: 1.6,
+              life: 0.45, size: 0.1, sizeEnd: 0.01, kind: P_STAR,
+              hue: hues[i], hueJitter: 14, light: 82, drag: 2, gravity: 2,
+            });
+          }
+        }
         break;
       }
       case 'chainLightning': {
@@ -837,6 +907,304 @@ export class Renderer {
     this.effects.disk(x, z, {
       r1: 1.6, dur: 0.28, hue: 280, sat: 90, light: 66, alpha: 0.2, core: 0.1, rim: 0.8,
     });
+  }
+
+  // ── 元素法师技能树：新增机制的专属视觉 ──────────────────────────────────────
+
+  /** 余烬：小范围火焰炸开（灼热飞弹左支）。 */
+  _playMageEmberBurst(x, z, evt = {}) {
+    const P = this.particles;
+    const r = clamp(Number.isFinite(evt.radius) ? evt.radius : 1.6, 0.7, 4);
+    this.effects.disk(x, z, {
+      r1: r, dur: 0.3, hue: 24, sat: 100, light: 62, alpha: 0.3, core: 0.25, rim: 0.7,
+    });
+    this.effects.crack(x, z, { radius: r * 0.9, dur: 0.45, hue: 22, branches: 4 });
+    P.spawnBurstRing(x, z, {
+      count: 16, radius: r * 0.25, jitter: 0.3, speedMin: 2, speedMax: 6, up: 1.5,
+      life: 0.45, size: 0.11, sizeEnd: 0.01, kind: P_SPARK,
+      hue: 26, hueJitter: 14, sat: 100, light: 78, drag: 2.6, gravity: 4,
+    });
+    this.cam.shake(2.2);
+  }
+
+  /** 凤凰之焰：从玩家方向扑出的多重火翼 + 地面火盘 + 大字。 */
+  _playMagePhoenix(x, z, evt = {}) {
+    const P = this.particles;
+    const r = clamp(Number.isFinite(evt.radius) ? evt.radius : 4.5, 2, 8);
+    const fromX = Number.isFinite(evt.fromX) ? evt.fromX : x;
+    const fromZ = Number.isFinite(evt.fromZ) ? evt.fromZ : z;
+    this.flash(28, 0.14, 0.32);
+    this.fx.chromaPulse(0.3);
+    // 火翼：多道弧线从玩家方向展开，越高越淡
+    for (let i = 0; i < 7; i++) {
+      const sway = (i - 3) * 0.6;
+      this.effects.bolt(fromX + sway * 0.2, fromZ, x + sway, z - Math.abs(sway) * 0.35, {
+        h: 0.9 + i * 0.24, hue: i % 2 ? 38 : 22, sat: 100, light: 70,
+        width: 2.4 + i * 0.35, dur: 0.16, branch: 1.0,
+      });
+    }
+    this.effects.disk(x, z, {
+      r1: r, dur: 0.5, hue: 30, sat: 100, light: 64, alpha: 0.32, core: 0.3, rim: 0.72,
+    });
+    this.effects.crack(x, z, { radius: r * 0.85, dur: 0.85, hue: 24, branches: 9 });
+    P.spawnBurstRing(x, z, {
+      count: 38, radius: r * 0.3, jitter: 0.3, speedMin: 2.6, speedMax: 8.5, up: 2.2,
+      life: 0.8, size: 0.15, sizeEnd: 0.02, kind: P_STAR,
+      hue: 30, hueJitter: 18, sat: 100, light: 80, drag: 2, gravity: 4,
+    });
+    P.spawnBurst(x, z, {
+      count: 18, hue: 22, hueJitter: 16, speedMin: 1.2, speedMax: 4.5, up: 2.6,
+      life: 0.9, size: 0.12, kind: P_QUAD, light: 78, drag: 1.6, gravity: 6,
+    });
+    this.text.add(x, z, '凤凰之焰', { kind: 'gold', h: 2.8, size: 22, life: 1.1 });
+    this.cam.shake(9);
+  }
+
+  /** 冰爆：冰棱炸开 + 短冻结。 */
+  _playMageFrostBurst(x, z, evt = {}) {
+    const P = this.particles;
+    const r = clamp(Number.isFinite(evt.radius) ? evt.radius : 1.7, 0.7, 4.5);
+    const frozen = !!evt.frozen;
+    this.effects.disk(x, z, {
+      r1: r, dur: 0.34, hue: 195, sat: 92, light: 68,
+      alpha: frozen ? 0.36 : 0.24, core: 0.2, rim: 0.8,
+    });
+    P.spawnBurstRing(x, z, {
+      count: frozen ? 24 : 14, radius: r * 0.22, jitter: 0.3,
+      speedMin: 2.2, speedMax: frozen ? 7.5 : 5, up: 2.2,
+      life: 0.5, size: 0.12, sizeEnd: 0.02, kind: P_QUAD,
+      hue: 195, hueJitter: 12, sat: 88, light: 80, drag: 2.2, gravity: 3,
+    });
+    if (frozen) {
+      P.spawnBurst(x, z, {
+        count: 14, hue: 190, hueJitter: 16, speedMin: 0.4, speedMax: 2, up: 2.2,
+        life: 0.8, size: 0.1, kind: P_STAR, light: 86, drag: 1.4, gravity: -1.6,
+      });
+      this.cam.shake(3.2);
+    }
+  }
+
+  /** 极寒领域：大范围冰环 + 上升冰晶。 */
+  _playMageIceField(x, z, evt = {}) {
+    const P = this.particles;
+    const r = clamp(Number.isFinite(evt.radius) ? evt.radius : 4.4, 2, 9);
+    this.effects.disk(x, z, {
+      r1: r, dur: 0.6, hue: 193, sat: 90, light: 70, alpha: 0.32, core: 0.18, rim: 0.82,
+    });
+    this.shockwave(x, z, 195, { radius: r, dur: 0.7, count: 46 });
+    P.spawnBurstRing(x, z, {
+      count: 42, radius: r * 0.25, jitter: 0.3, speedMin: 1.8, speedMax: 7, up: 2.6,
+      life: 0.9, size: 0.13, sizeEnd: 0.01, kind: P_QUAD,
+      hue: 192, hueJitter: 14, sat: 88, light: 82, drag: 1.8, gravity: 2,
+    });
+    P.spawnBurstRing(x, z, {
+      count: 24, radius: r * 0.72, jitter: 0.18, speedMin: -3.2, speedMax: -1.2, up: 3.2,
+      life: 1.0, size: 0.11, sizeEnd: 0.02, kind: P_STAR,
+      hue: 200, hueJitter: 10, light: 88, drag: 1.2, gravity: -1,
+    });
+    this.flash(195, 0.08, 0.28);
+    this.cam.shake(5);
+  }
+
+  /** 寒冰护甲：脚边浮起的冰壳。 */
+  _playMageIceArmor(x, z, evt = {}) {
+    const P = this.particles;
+    this.effects.disk(x, z, {
+      r1: 1.35, dur: 0.42, hue: 195, sat: 90, light: 70, alpha: 0.22, core: 0.12, rim: 0.7,
+    });
+    P.spawnBurstRing(x, z, {
+      count: 20, radius: 0.65, jitter: 0.2, speedMin: -1.8, speedMax: -0.6, up: 2.6,
+      life: 0.75, size: 0.1, sizeEnd: 0.02, kind: P_QUAD,
+      hue: 195, hueJitter: 8, light: 84, drag: 1.4, gravity: -0.6,
+    });
+    this.text.add(x, z, `+${Math.round(Number(evt.amount) || 0)} 护盾`, {
+      kind: 'cold', h: 2.1, size: 13,
+    });
+  }
+
+  /** 跳弧：目标之间的闪电折线。 */
+  _playMageArcJump(evt, x, z) {
+    const P = this.particles;
+    const fromX = Number.isFinite(evt.fromX) ? evt.fromX : x;
+    const fromZ = Number.isFinite(evt.fromZ) ? evt.fromZ : z;
+    this.effects.bolt(fromX, fromZ, x, z, { h: 0.95, hue: 55, width: 2.8, dur: 0.1, branch: 1.0 });
+    P.spawnBurst(x, z, {
+      count: 12, hue: 55, hueJitter: 18, speedMin: 2, speedMax: 7, up: 0.9,
+      life: 0.3, size: 0.11, kind: P_SPARK, light: 88, drag: 3.2, gravity: 2,
+    });
+    this.effects.disk(x, z, {
+      r1: 1.1, dur: 0.2, hue: 55, sat: 100, light: 72, alpha: 0.2, core: 0.12, rim: 0.6,
+    });
+  }
+
+  /** 疾电：脚下短暂的电光风环。 */
+  _playMageArcHaste(x, z, evt = {}) {
+    const P = this.particles;
+    this.effects.disk(x, z, {
+      r1: 1.2, dur: 0.26, hue: 55, sat: 100, light: 72, alpha: 0.18, core: 0.1, rim: 0.6,
+    });
+    P.spawnBurstRing(x, z, {
+      count: 14, radius: 0.8, jitter: 0.15, speedMin: -2.4, speedMax: -0.8, up: 2.0,
+      life: 0.35, size: 0.09, kind: P_SPARK, hue: 55, hueJitter: 14, light: 88, drag: 2, gravity: -0.4,
+    });
+  }
+
+  /** 雷霆万钧：从天空落下的多重雷柱。 */
+  _playMageThunder(x, z, evt = {}) {
+    const P = this.particles;
+    const pts = Array.isArray(evt.points) ? evt.points.slice(0, 6) : [];
+    if (!pts.length) pts.push({ x, z });
+    this.flash(55, 0.1, 0.2);
+    this.cam.shake(6 + pts.length);
+    for (let i = 0; i < pts.length; i++) {
+      const p = pts[i];
+      const px = Number.isFinite(p.x) ? p.x : x;
+      const pz = Number.isFinite(p.z) ? p.z : z;
+      // 天雷：高处斜插入地面
+      this.effects.bolt(px + 2.4, pz - 3.0, px, pz, {
+        h: 5.6, hue: 55, sat: 100, light: 82, width: 4.5, dur: 0.14, branch: 1.15,
+      });
+      this.effects.disk(px, pz, {
+        r1: 1.5, dur: 0.28, hue: 55, sat: 100, light: 72, alpha: 0.3, core: 0.2, rim: 0.7,
+      });
+      P.spawnBurstRing(px, pz, {
+        count: 12, radius: 0.25, jitter: 0.3, speedMin: 2.5, speedMax: 7, up: 2.2,
+        life: 0.45, size: 0.11, sizeEnd: 0.01, kind: P_SPARK,
+        hue: 55, hueJitter: 12, light: 90, drag: 2.4, gravity: 3,
+      });
+    }
+    this.text.add(x, z, '雷霆万钧', { kind: 'gold', h: 2.5, size: 18, life: 0.9 });
+  }
+
+  /** 流星雨：多点小陨星（比完整陨星轻，避免同一帧叠太多全屏闪）。 */
+  _playMageMeteorRain(x, z, evt = {}) {
+    const P = this.particles;
+    const pts = Array.isArray(evt.points) ? evt.points.slice(0, 6) : [];
+    if (!pts.length) pts.push({ x, z });
+    for (let i = 0; i < pts.length; i++) {
+      const p = pts[i];
+      const px = Number.isFinite(p.x) ? p.x : x;
+      const pz = Number.isFinite(p.z) ? p.z : z;
+      this.effects.bolt(px + 1.8, pz - 2.0, px, pz, {
+        h: 4.6, hue: 24, sat: 100, light: 70, width: 4, dur: 0.16, branch: 0.35,
+      });
+      this.effects.disk(px, pz, {
+        r1: 1.5, dur: 0.3, hue: 26, sat: 100, light: 64, alpha: 0.26, core: 0.2, rim: 0.6,
+      });
+      P.spawnBurstRing(px, pz, {
+        count: 10, radius: 0.25, jitter: 0.3, speedMin: 1.8, speedMax: 5.5, up: 1.8,
+        life: 0.5, size: 0.1, sizeEnd: 0.01, kind: P_SPARK,
+        hue: 26, hueJitter: 14, light: 80, drag: 2.2, gravity: 4,
+      });
+    }
+    this.cam.shake(3 + pts.length);
+  }
+
+  /** 双重引爆：第二段火焰圆盘（冲击感稍弱于首爆）。 */
+  _playMageDoubleDetonate(x, z, evt = {}) {
+    const P = this.particles;
+    const r = clamp(Number.isFinite(evt.radius) ? evt.radius : 2.7, 1, 7);
+    this.effects.disk(x, z, {
+      r1: r, dur: 0.45, hue: 32, sat: 100, light: 64, alpha: 0.34, core: 0.3, rim: 0.7,
+    });
+    this.effects.crack(x, z, { radius: r * 0.9, dur: 0.7, hue: 22, branches: 8 });
+    P.spawnBurstRing(x, z, {
+      count: 26, radius: r * 0.3, jitter: 0.28, speedMin: 2.4, speedMax: 7.5, up: 1.8,
+      life: 0.55, size: 0.13, sizeEnd: 0.01, kind: P_SPARK,
+      hue: 32, hueJitter: 16, sat: 100, light: 80, drag: 2.2, gravity: 4,
+    });
+    this.cam.shake(6);
+  }
+
+  /** 天火焚世：整屏陨星 + 大字 + 强色差。 */
+  _playMageCataclysm(x, z, evt = {}) {
+    const P = this.particles;
+    const r = clamp(Number.isFinite(evt.radius) ? evt.radius : 4, 2, 12);
+    const pts = Array.isArray(evt.points) ? evt.points.slice(0, 8) : [];
+    this.flash(24, 0.2, 0.4);
+    this.fx.chromaPulse(0.55);
+    this.cam.shake(14);
+    this.effects.disk(x, z, {
+      r1: r, dur: 0.7, hue: 26, sat: 100, light: 62, alpha: 0.3, core: 0.22, rim: 0.7,
+    });
+    for (let i = 0; i < pts.length; i++) {
+      const p = pts[i];
+      const px = Number.isFinite(p.x) ? p.x : x;
+      const pz = Number.isFinite(p.z) ? p.z : z;
+      this.effects.bolt(px + 2.4, pz - 2.8, px, pz, {
+        h: 5.8, hue: i % 2 ? 38 : 22, sat: 100, light: 76,
+        width: 5.2, dur: 0.18, branch: 0.3,
+      });
+      this.effects.disk(px, pz, {
+        r1: 1.9, dur: 0.4, hue: 28, sat: 100, light: 64, alpha: 0.3, core: 0.25, rim: 0.65,
+      });
+    }
+    P.spawnBurst(x, z, {
+      count: 34, hue: 26, hueJitter: 20, speedMin: 2, speedMax: 8, up: 2.4,
+      life: 0.85, size: 0.14, sizeEnd: 0.02, kind: P_STAR, light: 84, drag: 1.8, gravity: 6,
+    });
+    this.text.add(x, z, '天火焚世', { kind: 'gold', h: 3.0, size: 24, life: 1.2 });
+  }
+
+  /** 熔岩池：暗红地面 + 向上飘的火星（每次 tick 叠一层）。 */
+  _playMageLava(x, z, evt = {}) {
+    const P = this.particles;
+    const r = clamp(Number.isFinite(evt.radius) ? evt.radius : 2.4, 0.8, 7);
+    const tick = Number.isFinite(evt.tick) ? evt.tick : 0;
+    this.effects.disk(x, z, {
+      r1: r, dur: 0.85, hue: 16, sat: 100, light: 48,
+      alpha: tick === 0 ? 0.45 : 0.3, core: 0.32, rim: 0.6,
+    });
+    this.effects.crack(x, z, {
+      radius: r * 0.85, dur: 1.0, hue: 14, branches: 6 + tick,
+    });
+    P.spawnBurst(x, z, {
+      count: 12, hue: 18, hueJitter: 16, speedMin: 0.3, speedMax: 1.6, up: 2.4,
+      life: 0.8, size: 0.1, sizeEnd: 0.01, kind: P_DOT,
+      light: 72, drag: 1.2, gravity: -1.4, radius: r * 0.5,
+    });
+    if (tick === 0) this.cam.shake(4);
+  }
+
+  /** 元素奇点：开启时向内吸附的漩涡；结束时向外爆开。 */
+  _playMageSingularity(x, z, evt = {}) {
+    const P = this.particles;
+    const r = clamp(Number.isFinite(evt.radius) ? evt.radius : 4.6, 2, 10);
+    const open = evt.phase !== 'close';
+    this.flash(280, open ? 0.14 : 0.22, open ? 0.35 : 0.5);
+    this.fx.chromaPulse(open ? 0.45 : 0.7);
+    this.slowMo(open ? 0.35 : 0.5, open ? 0.45 : 0.25);
+    this.cam.shake(open ? 9 : 13);
+    const hues = [280, 265, 300, 190];
+    for (let i = 0; i < hues.length; i++) {
+      this.effects.disk(x, z, {
+        r1: r * (0.28 + i * 0.18), dur: 0.7 + i * 0.1,
+        hue: hues[i], sat: 86, light: 58, alpha: 0.18, core: 0.1, rim: 0.55,
+      });
+    }
+    if (open) {
+      // 向内吸附：负速度粒子从圆周卷入中心
+      P.spawnBurstRing(x, z, {
+        count: 54, radius: r * 0.85, jitter: 0.12,
+        speedMin: -6.5, speedMax: -2.2, up: 1.2,
+        life: 0.85, size: 0.12, sizeEnd: 0.01, kind: P_STAR,
+        hue: 280, hueJitter: 30, sat: 100, light: 82, drag: 0.8, gravity: 0,
+      });
+      for (let i = 0; i < 8; i++) {
+        const a = (i / 8) * Math.PI * 2;
+        this.effects.bolt(
+          x + Math.cos(a) * r * 0.9, z + Math.sin(a) * r * 0.9, x, z,
+          { h: 0.9 + (i % 3) * 0.5, hue: hues[i % hues.length], width: 2.2, dur: 0.16, branch: 0.8 },
+        );
+      }
+      this.text.add(x, z, '元素奇点', { kind: 'gold', h: 2.8, size: 22, life: 1.1 });
+    } else {
+      P.spawnBurst(x, z, {
+        count: 46, hue: 280, hueJitter: 40, speedMin: 3, speedMax: 11, up: 1.6,
+        life: 0.8, size: 0.15, sizeEnd: 0.02, kind: P_STAR, light: 84, drag: 1.6, gravity: 2,
+      });
+      this.effects.crack(x, z, { radius: r * 0.8, dur: 0.9, hue: 280, branches: 10 });
+    }
   }
 
   /** 炎爆术：目标处火焰爆发（强化时更大、更亮、带裂纹）。 */
@@ -1274,6 +1642,7 @@ export class Renderer {
     this._drawGround(ctx, cam, world);
     this._drawWalls(ctx, cam, world);
     this._drawGroundEffects(ctx, cam, world);
+    this._drawHomeInteractables(ctx, cam, world);
     this._drawItemsAndOrbs(ctx, cam, world);
     this._drawShadows(ctx, cam, world);
     this._drawWhirl(ctx, cam);

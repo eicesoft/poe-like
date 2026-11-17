@@ -9,6 +9,7 @@ import { $, $ALL, el, escapeHTML, rarityColor, itemTooltipHTML, pct, syncSkillSl
 import { openInventory, resetSellConfirm } from './inventory-ui.js';
 import { openTalents } from './talent-ui.js';
 import { openSkills, refineStatus } from './skill-ui.js';
+import { openHomePanel, refreshHomePanel } from './home-ui.js';
 import * as skillsMod from '../core/skills.js';
 import { isMuted, toggleMute, playSfx } from './sfx.js';
 // 技能栏角标（Q/W/E/R/T）以输入层的键位表为唯一真相，见 syncSkillSlotLabels()
@@ -345,8 +346,13 @@ export class GameUI {
           this.addLog(`第 ${(w.stats && w.stats.waves) || '?'} 波`, '#999');
           break;
         case 'mapLoaded':
-          this.banner(`进入： ${e.name}`, '#c8a25a');
-          this.addLog(`进入地图：${e.name}（第 ${w.map.tier} 层，等级 ${w.map.level}）`, '#c8a25a');
+          if (e.isHome) {
+            this.banner(`回到： ${e.name}`, '#ffcf7a');
+            this.addLog('庇护所：靠近设施按 F 互动 · 战斗之门 / T 开启战斗地图', '#c8a25a');
+          } else {
+            this.banner(`进入： ${e.name}`, '#c8a25a');
+            this.addLog(`进入地图：${e.name}（第 ${w.map.tier} 层，等级 ${w.map.level}）`, '#c8a25a');
+          }
           break;
         case 'noMana':
           this.addLog('法力不足', '#5a8bff');
@@ -403,7 +409,7 @@ export class GameUI {
         glyph.title = this.game.world.player.type === 'mage' ? '闪现（空格）' : '翻滚（空格）';
       } else if (i === 6) {
         glyph.textContent = '🏕';
-        glyph.title = '回城 / 下一张图';
+        glyph.title = '回城 / 开启战斗地图';
       }
     });
     /* TEMP-DISABLED */
@@ -422,8 +428,8 @@ export class GameUI {
     if (this.el.mageStatus) this.el.mageStatus.classList.toggle('hidden', !mage);
     if (this.el.helpHint) {
       this.el.helpHint.innerHTML = mage
-        ? '方向键 / WASD 移动 · <b>自动施法</b> · 左键锁定 · <b>T</b> 元素狂潮 · 空格闪现 · F 拾取 · I 背包 · K/Tab 技能 · C 属性 · <b>ESC 暂停</b>'
-        : '方向键 移动 · <b>Q W E R T</b> 技能 · 左键 普攻 · 空格 翻滚 · F 拾取 · I 背包 · K/Tab 技能天赋 · P 天赋 · <b>C 属性</b> · <b>ESC 暂停</b> · M 静音';
+        ? '方向键 / WASD 移动 · <b>自动施法</b> · 左键锁定 · <b>T</b> 元素狂潮 · 空格闪现 · F 互动/拾取 · I 背包 · K/Tab 技能 · C 属性 · <b>ESC 暂停</b>'
+        : '方向键 移动 · <b>Q W E R T</b> 技能 · 左键 普攻 · 空格 翻滚 · F 互动/拾取 · I 背包 · K/Tab 技能天赋 · P 天赋 · <b>C 属性</b> · <b>ESC 暂停</b> · M 静音';
     }
     this.refreshSkillBarIcons();
     this._updateMageHud();
@@ -498,6 +504,7 @@ export class GameUI {
   }
   onInventoryChange() {
     if (this.modalOpen === 'inventory') openInventory(this);
+    else refreshHomePanel(this);
   }
   onTalentsChange() {
     if (this.modalOpen === 'talents') openTalents(this);
@@ -795,6 +802,11 @@ export class GameUI {
   refreshMap() {
     const m = this.game.world.map;
     if (!m) return;
+    if (m.isHome) {
+      this.el.mapName.textContent = `${m.name} · 安全区`;
+      this.el.mapMods.innerHTML = '<span class="mapmod">仓库 · 商人 · 赌徒 · 战斗之门</span>';
+      return;
+    }
     this.el.mapName.textContent = `${m.name} · 第 ${m.tier} 层`;
     this.el.mapMods.innerHTML = (m.mods || []).map((mod) => `<span class="mapmod">${escapeHTML(mod.text)}</span>`).join('');
   }
@@ -1024,7 +1036,7 @@ export class GameUI {
    */
   activePanel() {
     const m = this.modalOpen;
-    if (!m) return null;
+    if (!m || m.startsWith('home-')) return null;
     return m === 'inventory' ? 'equipment' : m;
   }
 
@@ -1062,6 +1074,20 @@ export class GameUI {
     this.openModal('inventory');
     openInventory(this);
     this._syncPanelBar();
+  }
+  /**
+   * 庇护所设施面板（仓库 / 商人 / 赌徒）。
+   * modalOpen 使用 'home-stash' / 'home-merchant' / 'home-gambler'，
+   * 与底部按钮列（stats/talents/skills/equipment）互不干扰。
+   * @param {'stash'|'merchant'|'gambler'} kind
+   */
+  showHomePanel(kind) {
+    const key = 'home-' + kind;
+    if (this.modalOpen === key) return this.closeModals();
+    this.openModal(key);
+    openHomePanel(this, kind);
+    this._syncPanelBar();
+    return this.modalOpen;
   }
   toggleTalents() {
     if (this.modalOpen === 'talents') return this.closeModals();

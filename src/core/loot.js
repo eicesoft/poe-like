@@ -44,6 +44,31 @@ export const SKILL_ORB_DROP = Object.freeze({
 export const SKILL_ORB_BOSS_AMOUNT = 3;
 
 /**
+ * 传奇 / 暗金装备的独立掉落率（每次击杀额外掷一次，不占用普通装备掉落）。
+ * 高阶内容（精英、Boss、深层地图）成长更快：等级越高，暗金越常见。
+ * 数值为「每次击杀」的基础概率，实际还会叠加地图「物品数量」词缀。
+ */
+export const UNIQUE_DROP_RATE = Object.freeze({
+  normal: Object.freeze({ base: 0.002, perLevel: 0.0001, max: 0.008 }),
+  magic: Object.freeze({ base: 0.008, perLevel: 0.0002, max: 0.02 }),
+  rare: Object.freeze({ base: 0.03, perLevel: 0.0006, max: 0.08 }),
+  boss: Object.freeze({ base: 1, perLevel: 0, max: 1 }),
+});
+
+/**
+ * 某种敌人 / 等级下的暗金掉落概率（0..1）。
+ * @param {'normal'|'magic'|'rare'|'elite'|'boss'|'unique'} rarity
+ * @param {number} [level=1]
+ * @returns {number}
+ */
+export function uniqueDropChance(rarity, level = 1) {
+  const key = rarity === 'elite' ? 'rare' : normalizeRarity(rarity);
+  const cfg = UNIQUE_DROP_RATE[key] || UNIQUE_DROP_RATE.normal;
+  const lv = Math.max(1, Math.floor(Number(level) || 1));
+  return Math.min(cfg.max, cfg.base + cfg.perLevel * (lv - 1));
+}
+
+/**
  * 稀有度中文名。
  * 注意：items 模块用 'unique' 表示传奇（POE 命名），本模块两种键都兼容，
  * finalizeItem 会把 'legendary' 归一成 'unique' 后再查表。
@@ -391,21 +416,23 @@ export function rollItemRarity(rng, rarity, roll) {
   const v = typeof roll === 'number' ? roll : r.next();
   if (enemy === 'boss') return 'rare';
   if (enemy === 'rare' || enemy === 'elite') {
-    if (v < 0.08) return 'rare';
-    if (v < 0.48) return 'magic';
+    // [高阶掉落调整] 精英：稀有 8% → 9%，魔法 40% → 46%（普通 45%）
+    if (v < 0.09) return 'rare';
+    if (v < 0.55) return 'magic';
     return 'normal';
   }
   if (enemy === 'magic') {
-    if (v < 0.03) return 'rare';
-    if (v < 0.15) return 'magic';
+    // [高阶掉落调整] 魔法怪：稀有 3% → 4%，魔法 12% → 16%
+    if (v < 0.04) return 'rare';
+    if (v < 0.20) return 'magic';
     return 'normal';
   }
   // [playtest 修复] 普通怪掉落率：原来 2.5% 魔法 + 0.5% 稀有，而 rollLoot 只在 roll !== 'normal'
   // 时才产出物品 → 实测每 100 杀只有 1 件掉落（目标 8-15 件/100 杀），玩家换装几乎停滞。
-  // 现在 → 魔法 9% + 稀有 2%（合计 11%/杀）：playtest 实测 45-48 杀/分钟 → 约 5 件/分钟，
+  // 现在 → 魔法 10% + 稀有 2.5%（合计 12.5%/杀）：playtest 实测 45-48 杀/分钟 → 约 5-6 件/分钟，
   // 加上精英必掉、Boss 掉落与地图「贪婪」词缀，整体落在「5-15 件/分钟」区间。
-  if (v < 0.02) return 'rare';
-  if (v < 0.11) return 'magic';
+  if (v < 0.025) return 'rare';
+  if (v < 0.125) return 'magic';
   return 'normal';
 }
 
@@ -531,9 +558,10 @@ export function rollLoot(world, monster) {
   rollSkillOrbDrop(world, monster);
 
   if (rarity === 'boss') {
-    // Boss：必掉 2 稀有 + 50% 传奇 + 一堆魂火
+    // Boss：必掉 2 稀有 + 1 必定暗金（另有 35% 几率再掉一件暗金）+ 一堆魂火
     for (let i = 0; i < 2; i++) out.push(dropItem(world, monster.x, monster.z, { level: lvl, rarity: 'rare' }));
-    if (rng.chance(0.5)) out.push(dropItem(world, monster.x, monster.z, { level: lvl, rarity: 'unique' }));
+    out.push(dropItem(world, monster.x, monster.z, { level: lvl, rarity: 'unique' }));
+    if (rng.chance(0.35)) out.push(dropItem(world, monster.x, monster.z, { level: lvl, rarity: 'unique' }));
     dropOrbs(world, monster.x, monster.z, 'gold', 12);
     dropOrbs(world, monster.x, monster.z, 'xp', 6);
     dropOrbs(world, monster.x, monster.z, 'orb', 4);
@@ -545,7 +573,7 @@ export function rollLoot(world, monster) {
   // 地图词缀 itemQuantity（+物品数量）会额外给一次掉落机会
   const iq = readItemQuantity(world);
   if (enemy === 'rare') {
-    // 精英必掉 1 件：稀有度按 rollItemRarity 分布（8% 稀有 / 32% 魔法 / 其余普通）
+    // 精英必掉 1 件：稀有度按 rollItemRarity 分布（9% 稀有 / 46% 魔法 / 其余普通）
     out.push(dropItem(world, monster.x, monster.z, { level: lvl, rarity: roll }));
   } else if (roll !== 'normal') {
     out.push(dropItem(world, monster.x, monster.z, { level: lvl, rarity: roll }));
@@ -554,6 +582,13 @@ export function rollLoot(world, monster) {
   }
   if (iq > 0 && rng.chance(Math.min(0.35, iq * 0.1))) {
     out.push(dropItem(world, monster.x, monster.z, { level: lvl, rarity: 'magic' }));
+  }
+
+  // 暗金独立掉落：与上面的普通装备掉落互不影响；精英 / 高等级地图概率更高，
+  // 地图「物品数量」词缀也会按比例放大暗金机会（上限 15%）。
+  const uniqueChance = Math.min(0.15, uniqueDropChance(enemy, lvl) * (1 + Math.max(0, iq)));
+  if (uniqueChance > 0 && rng.chance(uniqueChance)) {
+    out.push(dropItem(world, monster.x, monster.z, { level: lvl, rarity: 'unique' }));
   }
 
   // 魂火（经验/金钱）

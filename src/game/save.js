@@ -24,6 +24,8 @@ export function makeSave(world, inv, extra = {}) {
       tier: world.tier,
       career: world.career,
       seed: world.seed,
+      // 从家的战斗之门出去时要进入的层数（0 层=庇护所）
+      homeNextTier: world.homeNextTier,
     },
     player: {
       name: p.name,
@@ -43,6 +45,7 @@ export function makeSave(world, inv, extra = {}) {
     inv: {
       equip: inv.equip,
       bag: inv.bag,
+      stash: Array.isArray(inv.stash) ? inv.stash : [],
       gold: inv.gold,
       talentPoints: inv.talentPoints,
       skillPoints: inv.skillPoints,
@@ -222,6 +225,12 @@ export function applySave(game, data) {
     } else inv.bag = bag.slice();
     // 2.3 货币 / 点数 / 天赋
     inv.gold = Math.max(0, num(si.gold, 0));
+    // 仓库（老存档没有 → 空仓库）
+    const stash = Array.isArray(si.stash) ? si.stash.filter((it) => it && typeof it === 'object') : [];
+    if (Array.isArray(inv.stash)) {
+      inv.stash.length = 0;
+      for (const it of stash) inv.stash.push(it);
+    } else inv.stash = stash.slice();
     inv.talentPoints = Math.max(0, Math.floor(num(si.talentPoints, 0)));
     if (Array.isArray(si.talents) && si.talents.length) inv.talents = si.talents.slice();
     else if (!Array.isArray(inv.talents) || !inv.talents.length) inv.talents = defaults.talents.slice();
@@ -233,11 +242,12 @@ export function applySave(game, data) {
     inv.skillOrbs = sk.skillOrbs;
 
     // ---- 3) 世界：层数 + 刷图统计 ----
-    const tier = Math.floor(num(data.world && data.world.tier, world.tier || 1));
-    if (tier >= 1) {
-      world.tier = tier;
-      world.loadMapRequest = true; // 提示调用方：需要 loadMap 到该层
-    }
+    // 0 层 = 庇护所；老存档/新游戏也允许 0，读档后由 main.js 统一 loadMap。
+    const tier = Math.max(0, Math.floor(num(data.world && data.world.tier, world.tier || 0)));
+    world.tier = tier;
+    world.loadMapRequest = true; // 提示调用方：需要 loadMap 到该层
+    const nextTier = Math.floor(num(data.world && data.world.homeNextTier, world.homeNextTier || 1));
+    world.homeNextTier = Math.max(1, nextTier);
     if (data.world && data.world.career && typeof data.world.career === 'object') {
       const c = data.world.career;
       if (world.career) for (const k in c) if (Number.isFinite(Number(c[k]))) world.career[k] = Number(c[k]);
@@ -280,7 +290,7 @@ export function getSaveSummary(data) {
   return {
     level: Math.max(1, Math.floor(num(p.level, 1))),
     classId: p.type === 'mage' ? 'mage' : 'warrior',
-    tier: Math.max(1, Math.floor(num(data.world && data.world.tier, 1))),
+    tier: Math.max(0, Math.floor(num(data.world && data.world.tier, 0))),
     gold: Math.max(0, Math.floor(num(data.inv && data.inv.gold, 0))),
     playTime: Math.max(0, num(career.playTime, 0)),
     ts: Math.max(0, num(data.ts, 0)),
@@ -330,6 +340,7 @@ export function validateSave(data) {
   if (inv) {
     if (inv.skillRanks != null && typeof inv.skillRanks !== 'object') errs.push('skillRanks');
     if (inv.skillRefine != null && typeof inv.skillRefine !== 'object') errs.push('skillRefine');
+    if (inv.stash != null && !Array.isArray(inv.stash)) errs.push('stash');
     if (inv.skillOrbs != null && (typeof inv.skillOrbs !== 'number' || !Number.isFinite(inv.skillOrbs) || inv.skillOrbs < 0)) {
       errs.push('skillOrbs');
     }

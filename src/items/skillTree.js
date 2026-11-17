@@ -53,6 +53,11 @@
 // 向后兼容：旧的 type（damageMult/radiusMult/cooldownMult/count/extra/aoeMult…）语义完全不变；
 // 已有的导出名（SKILL_TREES / SKILL_IDS / SKILL_NODES / SKILL_NODE_BY_ID / skillNodeById /
 // skillTreeOf / skillEffectsForSkill / skillPointsSpent / canUpgradeSkillNode）签名不变。
+//
+// 【法师 5 棵技能树】数据在 ./mageSkillTrees.js，和战士树共用 buildForkTree 模板，
+// 只是 classId='mage'。UI 按玩家职业过滤标签页；core 通过 player.skillMods 读取效果。
+
+import { MAGE_SKILL_TREE_SPECS } from './mageSkillTrees.js';
 
 /**
  * @typedef {Object} SkillEffect
@@ -212,6 +217,7 @@ export const SKILL_TREES = {
   // 左支「震怒」：伤害 / 范围 / 余震，把践踏当爆发；右支「壁垒」：护甲 / 眩晕 / 免控，把践踏当防御。
   stomp: {
     id: 'stomp',
+    classId: 'warrior',
     name: '战争践踏',
     icon: '💥',
     desc: '砸地眩晕范围内敌人，并按命中人数获得持续护甲。',
@@ -255,6 +261,7 @@ export const SKILL_TREES = {
   // 左支「疾刃」：攻速 / 冷却 / 流血；右支「风暴」：范围 / 吸怪 / 位移。
   whirlwind: {
     id: 'whirlwind',
+    classId: 'warrior',
     name: '旋风斩',
     icon: '🌀',
     desc: '按住持续旋转，对周围敌人造成连续多段伤害。',
@@ -295,6 +302,7 @@ export const SKILL_TREES = {
   // 左支「怒吼」：伤害 / 恐吓 / 范围；右支「号令」：治疗 / 护甲 / 团队增益。
   warcry: {
     id: 'warcry',
+    classId: 'warrior',
     name: '战吼',
     icon: '📢',
     desc: '发出战吼，提升自身伤害并震慑、恐吓周围敌人。',
@@ -336,6 +344,7 @@ export const SKILL_TREES = {
   // 左支「沸腾」：爆发（攻速 / 暴击 / 伤害）；右支「汲取」：吸血 / 减伤 / 持续时间。
   bloodRage: {
     id: 'bloodRage',
+    classId: 'warrior',
     name: '血性狂暴',
     icon: '🩸',
     desc: '燃烧生命换取狂暴：提升攻速、暴击与伤害。',
@@ -376,6 +385,7 @@ export const SKILL_TREES = {
   // 左支「尖柱」：图腾增伤 / 陷阱；右支「圣域」：群体护甲 / 回蓝。
   rally: {
     id: 'rally',
+    classId: 'warrior',
     name: '坚毅图腾',
     icon: '🗿',
     desc: '召唤图腾，为周围友军提供护甲与生命/法力回复。',
@@ -412,6 +422,23 @@ export const SKILL_TREES = {
     }),
   },
 };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 元素法师：5 棵技能分叉树（数据来自 ./mageSkillTrees.js）
+// 与战士树完全同构：ROOT → L1/R1（fork）→ … → L4/R4（forkFinal）→ U。
+// ─────────────────────────────────────────────────────────────────────────────
+for (const [skillId, spec] of Object.entries(MAGE_SKILL_TREE_SPECS)) {
+  SKILL_TREES[skillId] = {
+    id: skillId,
+    classId: 'mage',
+    name: spec.name,
+    icon: spec.icon,
+    desc: spec.desc,
+    shape: 'fork',
+    branches: { ...spec.branches },
+    nodes: buildForkTree(skillId, spec),
+  };
+}
 
 /** 技能 id 列表。 */
 export const SKILL_IDS = Object.freeze(Object.keys(SKILL_TREES));

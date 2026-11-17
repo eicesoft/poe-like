@@ -13,7 +13,7 @@
  * @property {string} color    POE 配色（用于名字 / 边框）
  * @property {string} bg       提示框背景色（半透明）
  * @property {string} border   提示框边框色
- * @property {number} pickWeight 掉落权重（普通 720 / 魔法 250 / 稀有 29 / 传奇 1）
+ * @property {number} pickWeight 掉落权重（普通 698 / 魔法 220 / 稀有 70 / 传奇 12）
  * @property {number} scoreMult  战力估算倍率（itemScore 用）
  * @property {string} desc     一句话说明
  */
@@ -26,23 +26,23 @@
 export const RARITY = Object.freeze({
   normal: Object.freeze({
     name: '普通', color: '#c8c8c8', bg: 'rgba(12,12,14,0.94)', border: '#3a3a42',
-    pickWeight: 720, scoreMult: 1.0, affixRange: Object.freeze([0, 0]),
+    pickWeight: 698, scoreMult: 1.0, affixRange: Object.freeze([0, 0]),
     desc: '没有词缀的白板装备',
   }),
   magic: Object.freeze({
     name: '魔法', color: '#8888ff', bg: 'rgba(12,12,22,0.94)', border: '#2c2c66',
-    pickWeight: 250, scoreMult: 1.15, affixRange: Object.freeze([1, 2]),
+    pickWeight: 220, scoreMult: 1.15, affixRange: Object.freeze([1, 2]),
     desc: '带有 1-2 条词缀的蓝装',
   }),
   rare: Object.freeze({
     name: '稀有', color: '#ffff77', bg: 'rgba(20,18,8,0.94)', border: '#5c5426',
-    pickWeight: 29, scoreMult: 1.35, affixRange: Object.freeze([4, 6]),
+    pickWeight: 70, scoreMult: 1.35, affixRange: Object.freeze([4, 6]),
     desc: '带有 4-6 条词缀的黄装',
   }),
   unique: Object.freeze({
     name: '传奇', color: '#af6025', bg: 'rgba(20,12,6,0.95)', border: '#5c3418',
-    pickWeight: 1, scoreMult: 1.9, affixRange: Object.freeze([0, 0]),
-    desc: '拥有独立名字与传奇效果的橙装',
+    pickWeight: 12, scoreMult: 1.9, affixRange: Object.freeze([0, 0]),
+    desc: '拥有独立名字与传奇效果的橙装（暗金）',
   }),
 });
 
@@ -72,8 +72,11 @@ export function rarityColor(rarity) {
   return r ? r.color : '#c8c8c8';
 }
 
-/** 默认掉落概率（普通 71% / 魔法 22% / 稀有 6.4% / 传奇 0.6%）。 */
-export const BASE_CHANCES = Object.freeze({ normal: 0.71, magic: 0.22, rare: 0.064, unique: 0.006 });
+/**
+ * 默认掉落概率（普通 69.8% / 魔法 22% / 稀有 7% / 传奇 1.2%）。
+ * [高阶掉落调整] 稀有 6.4% → 7%，传奇 0.6% → 1.2%（约翻倍），代价从普通档扣除。
+ */
+export const BASE_CHANCES = Object.freeze({ normal: 0.698, magic: 0.22, rare: 0.07, unique: 0.012 });
 
 /**
  * 掷一次掉落稀有度。

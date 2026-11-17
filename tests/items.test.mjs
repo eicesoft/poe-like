@@ -268,6 +268,34 @@ describe('传奇 unique.js', () => {
     assert.deepEqual(validateUniques(), []);
   });
 
+  test('每个部位至少 2 件暗金，且法师装备覆盖所有部位', () => {
+    /** @type {Record<string, number>} */
+    const perSlot = {};
+    for (const u of UNIQUES) {
+      const slot = BASE_BY_ID[u.baseId].slot;
+      perSlot[slot] = (perSlot[slot] || 0) + 1;
+    }
+    for (const slot of ITEM_SLOTS) {
+      assert.ok((perSlot[slot] || 0) >= 2, `${slot} 只有 ${perSlot[slot] || 0} 件暗金（至少 2 件）`);
+    }
+    // 法师武器：至少 3 件 caster 基底暗金（保证法师有专属武器 chase）
+    const casterWeapons = UNIQUES.filter((u) => {
+      const b = BASE_BY_ID[u.baseId];
+      return b.slot === 'weapon' && (b.tags || []).includes('caster');
+    });
+    assert.ok(casterWeapons.length >= 3, `法师武器暗金只有 ${casterWeapons.length} 件`);
+    // 法师防具 / 饰品：每个非武器部位都有至少 1 件提供法力 / 护盾 / 元素 / 冷却等法师属性的暗金
+    const mageStats = ['mana', 'manaRegen', 'energyShield', 'skillLevelBonus', 'fireDamageMult',
+      'coldDamageMult', 'lightningDamageMult', 'aoeMult', 'areaDamageMult', 'cdrMult'];
+    const mageFriendly = (u) => mageStats.some((k) => (u.stats[k] || 0) > 0);
+    for (const slot of ['shield', 'helmet', 'body', 'gloves', 'boots', 'ring', 'amulet', 'belt']) {
+      assert.ok(
+        UNIQUES.some((u) => BASE_BY_ID[u.baseId].slot === slot && mageFriendly(u)),
+        `${slot} 缺法师向暗金`,
+      );
+    }
+  });
+
   test('tryUnique 返回合法且等级合适的传奇', () => {
     const rng = new RNG(4);
     for (let i = 0; i < 200; i++) {
@@ -520,8 +548,9 @@ describe('物品展示 itemStatLines / itemToTooltipHTML / itemScore', () => {
 });
 
 describe('天赋树 talentTree.js', () => {
-  test('节点数量 >= 100，id 唯一', () => {
-    assert.ok(TALENTS.length >= 100, `天赋节点只有 ${TALENTS.length} 个`);
+  test('节点数量为 70，与法师树对齐，id 唯一', () => {
+    assert.equal(TALENTS.length, 70, `战士天赋树应为 70 个节点，实际 ${TALENTS.length}`);
+    assert.equal(TALENTS.length, itemsIndex.MAGE_TALENTS.length, '战士与法师天赋数量必须对齐');
     const ids = TALENTS.map((n) => n.id);
     assert.equal(new Set(ids).size, ids.length, '天赋 id 重复');
   });
@@ -679,7 +708,7 @@ describe('天赋树 talentTree.js', () => {
   test('坐标布局：主轴半径阶梯 + 6 条主干 + 6 个基石在最外圈', () => {
     const r = (n) => Math.hypot(n.x, n.y);
     const radii = new Set(TALENTS.map((n) => Math.round(r(n) / 5) * 5));
-    for (const want of [35, 70, 120, 180, 235, 290, 370, 450, 600]) {
+    for (const want of [35, 70, 120, 180, 290, 370, 450, 600]) {
       assert.ok(radii.has(want), `缺少半径约 ${want} 的一层（现有 ${[...radii].sort((a, b) => a - b).join(',')}）`);
     }
     const branches = new Set(TALENTS.map((n) => n.branch).filter((b) => b && b !== 'ring' && b !== 'center' && b !== 'keystone' && b !== 'legendary'));
@@ -719,7 +748,7 @@ describe('天赋树 talentTree.js', () => {
   test('talentStats 统计信息', () => {
     const s = talentStats();
     assert.equal(s.total, TALENTS.length);
-    assert.ok(s.byKind.notable >= 15, `notable 只有 ${s.byKind.notable}`);
+    assert.ok(s.byKind.notable >= 8, `notable 只有 ${s.byKind.notable}`);
     assert.ok(s.byKind.keystone >= 3);
     assert.equal(s.byKind.classStart, 1);
     assert.equal(s.byKind.legendary, 3);
@@ -731,15 +760,18 @@ describe('技能树 skillTree.js', () => {
   //（ROOT → 左支/右支（逐层互斥）→ 分支专精 → 终极），详见 docs/skill-upgrade-contract.md §3.1/§3.2。
   // 战争践踏 / 眩晕 的细节断言在 tests/skill-upgrade.test.mjs 里，这里只做数据与汇总的回归。
 
-  test('包含 core 的 5 个技能（1 号是 stomp 战争践踏）', () => {
-    for (const sid of ['stomp', 'whirlwind', 'warcry', 'bloodRage', 'rally']) {
+  test('包含 core 的 5 个战士技能 + 5 个法师技能（1 号是 stomp 战争践踏）', () => {
+    for (const sid of ['stomp', 'whirlwind', 'warcry', 'bloodRage', 'rally',
+      'mageFirebolt', 'mageIceShard', 'mageArc', 'magePyro', 'mageUltimate']) {
       assert.ok(SKILL_TREES[sid], `缺少技能树 ${sid}`);
       assert.ok(SKILL_TREES[sid].name && SKILL_TREES[sid].name.length > 0);
       assert.ok(Array.isArray(SKILL_TREES[sid].nodes));
     }
     assert.equal(SKILL_TREES.stomp.name, '战争践踏');
     assert.equal(SKILL_TREES.groundSlam, undefined, 'groundSlam 技能树已被 stomp 取代');
-    assert.equal(SKILL_IDS.length, 5);
+    assert.equal(SKILL_TREES.mageFirebolt.classId, 'mage');
+    assert.equal(SKILL_TREES.stomp.classId, 'warrior');
+    assert.equal(SKILL_IDS.length, 10);
   });
 
   test('每个技能 9-12 个节点，字段合法（含 branch / group）', () => {

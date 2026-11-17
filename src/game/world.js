@@ -1,6 +1,7 @@
 // 世界构建：把地牢、核心系统、装备、地图词缀/怪物缩放全部组装在一起。
 // 同时承担 POE 的「刷图循环」：死亡/回城 → 生成新随机地图（词缀更强、怪物更高级）。
-import { generateDungeon, rollMapMods, mapNameFor, MAP_MODS, MAP_THEMES } from './dungeon.js';
+import { generateDungeon, generateHomeDungeon, rollMapMods, mapNameFor, MAP_MODS, MAP_THEMES } from './dungeon.js';
+import { createHomeInteractables } from './home.js';
 import { RNG, hashString } from '../engine/rng.js';
 import { SpatialHash } from '../engine/spatial.js';
 
@@ -29,7 +30,13 @@ export function createWorld(opts = {}) {
     player: null,
     dungeon: null,
     map: null,
-    tier: opts.tier ?? 1,
+    interactables: [],
+    homeStock: null,
+    /** 商人补货次数：每次回家 +1，让库存随回城次数变化（避免每次回城都是同一批货） */
+    homeRestock: 0,
+    /** 从家的战斗之门进入时使用的层数（离开战斗地图时记住，回城后可以继续） */
+    homeNextTier: 1,
+    tier: opts.tier ?? 0,
     // 图层统计
     career: { mapsCleared: 0, totalKills: 0, totalDeaths: 0, playTime: 0, bestTier: 1, totalGold: 0 },
     // 输入/相机目标
@@ -63,28 +70,46 @@ export function aggregateMapMods(mods) {
   return out;
 }
 
-/** 生成一张新地图并把玩家放到入口 */
-export function loadMap(world, { tier = world.tier, seed = null, dungeon = null, roomies = null } = {}) {
+/**
+ * 生成一张地图并把玩家放到入口。
+ * tier 0（或 home:true）= 庇护所：安全大厅 + 仓库/商人/赌徒/战斗之门，不刷怪、不掷词缀。
+ * tier ≥ 1 = 战斗地图。
+ * @param {object} world
+ * @param {{tier?:number, seed?:number|null, dungeon?:object|null, roomies?:any, home?:boolean|null}} [opts]
+ */
+export function loadMap(world, { tier = world.tier, seed = null, dungeon = null, roomies = null, home = null } = {}) {
+  const isHome = home === true || (home !== false && Number(tier) <= 0);
+  const tierNum = isHome ? 0 : Math.max(1, Math.floor(Number(tier) || 1));
   // [Lead 修复] 地图等级不再固定取"加载瞬间的玩家等级"（会导致 Boss 永远是 lv1），
   // 而是随层数提高，并给一点成长跟随：level = max(tier*2, 玩家等级-1)
-  const level = Math.max(tier * 2, (world.player ? world.player.level : 1) - 1);
+  const level = isHome ? 1 : Math.max(tierNum * 2, (world.player ? world.player.level : 1) - 1);
   const s = (seed ?? ((Math.random() * 0xffffffff) >>> 0)) >>> 0;
-  const mapRng = new RNG(hashString('map' + s) ^ (tier * 2654435761 >>> 0));
+  const mapRng = new RNG(hashString('map' + s) ^ (tierNum * 2654435761 >>> 0));
   world.seed = s;
-  world.tier = tier;
-  const mods = rollMapMods(mapRng, tier * 2 + 2);
-  const d = dungeon ?? generateDungeon({ seed: s, level: tier * 2 + level * 0.5, size: tier <= 2 ? 'small' : tier <= 5 ? 'medium' : 'large' });
+  world.tier = tierNum;
+  const mods = isHome ? [] : rollMapMods(mapRng, tierNum * 2 + 2);
+  const d = dungeon ?? (isHome
+    ? generateHomeDungeon({ seed: s })
+    : generateDungeon({ seed: s, level: tierNum * 2 + level * 0.5, size: tierNum <= 2 ? 'small' : tierNum <= 5 ? 'medium' : 'large' }));
   world.dungeon = d;
   world.map = {
     id: s,
-    tier,
+    tier: tierNum,
     level,
-    name: mapNameFor(d.theme, tier),
+    name: isHome ? '庇护所' : mapNameFor(d.theme, tierNum),
     theme: d.theme,
     mods: mods.map((m) => ({ id: m.id, name: m.name, text: m.text, type: m.type, value: m.value })),
     isBoss: false,
+    isHome,
   };
-  world.mapMods = aggregateMapMods(world.map.mods);
+  world.mapMods = isHome ? {} : aggregateMapMods(world.map.mods);
+  // 家的交互点：仓库 / 商人 / 赌徒 / 战斗之门（战斗地图清空）
+  world.interactables = isHome ? createHomeInteractables(d) : [];
+  // 每次回家都刷新商人库存（补货游标 +1，货品与上次不同）
+  if (isHome) {
+    world.homeStock = null;
+    world.homeRestock = (Number(world.homeRestock) || 0) + 1;
+  }
   world.cleared = false;
   world.over = false;
   world.busy = 0;
@@ -135,7 +160,7 @@ export function loadMap(world, { tier = world.tier, seed = null, dungeon = null,
   // [Lead 修复] 刷怪器内部有"本刷怪器是否已初始化"的懒加载标记；
   // 换图时必须让它重新初始化（否则新地图沿用旧地图的波次/计时/存活上限 → 新图不刷怪或刷怪节奏错乱）。
   world.stats.spawnerReady = false;
-  world.emit('mapLoaded', { name: world.map.name, tier, level: world.map.level });
+  world.emit('mapLoaded', { name: world.map.name, tier: tierNum, level: world.map.level, isHome });
   return world;
 }
 

@@ -95,7 +95,7 @@ export function syncSkillSlotLabels(slots, skillKeys, bar) {
         hint = '空格 翻滚（0.18 秒无敌）';
       } else if (i === 6) {
         label = '🏕';
-        hint = '点此回城 / 下一层（老键位 T 已让给 5 号技能）';
+        hint = '点此回城 / 开启战斗地图（或按 T）';
       }
       if (keyEl && label) keyEl.textContent = label;
       if (hint) {

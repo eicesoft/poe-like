@@ -14,6 +14,7 @@ import {
   updateSpawner, initSpawner, startWave, spawnBoss, aliveCapFor, computeAliveCap, BOSS_TEMPLATE_ID,
   grantXp, xpForLevel, xpProgress,
   rollLoot, dropOrbs, pickupNearest, rollItemRarity, BASE_ITEM_TYPES, updateLootTtl, makeBuiltinItem, generateItem,
+  uniqueDropChance,
 } from '../src/core/index.js';
 
 // ---------------------------------------------------------------------------
@@ -841,7 +842,7 @@ describe('掉落 loot.js', () => {
       assert.ok(it, '有 item 实例');
       assert.ok(typeof it.name === 'string' && it.name.length > 0);
       assert.ok(typeof it.slot === 'string');
-      assert.ok(['normal', 'magic', 'rare', 'legendary'].includes(it.rarity), `rarity=${it.rarity}`);
+      assert.ok(['normal', 'magic', 'rare', 'unique', 'legendary'].includes(it.rarity), `rarity=${it.rarity}`);
       assert.ok(typeof it.rarityName === 'string');
       assert.ok(Array.isArray(it.mods));
       assert.ok(it.stats && typeof it.stats === 'object');
@@ -901,6 +902,21 @@ describe('掉落 loot.js', () => {
     rollLoot(world, boss);
     const rares = world.items.filter((d) => d.item && d.item.rarity === 'rare');
     assert.ok(rares.length >= 2, `稀有数量=${rares.length}`);
+  });
+
+  test('高阶掉落：暗金概率随等级 / 敌人稀有度提高，Boss 必掉暗金', () => {
+    // 等级成长：同一类敌人，深层地图的暗金概率更高
+    assert.ok(uniqueDropChance('normal', 30) > uniqueDropChance('normal', 1), '普通怪暗金概率未随等级提高');
+    assert.ok(uniqueDropChance('rare', 30) > uniqueDropChance('rare', 1), '精英暗金概率未随等级提高');
+    // 敌人梯度：精英 > 魔法 > 普通
+    assert.ok(uniqueDropChance('rare', 10) > uniqueDropChance('magic', 10), '精英暗金概率应高于魔法怪');
+    assert.ok(uniqueDropChance('magic', 10) > uniqueDropChance('normal', 10), '魔法怪暗金概率应高于普通怪');
+    // Boss：必掉至少 1 件暗金
+    const boss = spawnBoss(world);
+    boss.dead = true;
+    world.items.length = 0;
+    rollLoot(world, boss);
+    assert.ok(world.items.some((d) => d.item && d.item.rarity === 'unique'), 'Boss 应至少掉落 1 件暗金');
   });
 
   test('dropOrbs 生成魂火并推 orb 事件', () => {

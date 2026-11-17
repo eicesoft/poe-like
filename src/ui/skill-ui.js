@@ -529,7 +529,11 @@ function collectSkillIds(game, player) {
   if (player && player.type === 'mage') return out;
   const trees = skillTreeMod.SKILL_TREES;
   if (trees && typeof trees === 'object') {
-    for (const id of Object.keys(trees)) push(id);
+    for (const id of Object.keys(trees)) {
+      // 新增的法师技能树带 classId='mage'：战士面板不能把它们列出来
+      if (trees[id] && trees[id].classId === 'mage') continue;
+      push(id);
+    }
   }
   const ids = skillsMod.SKILL_IDS;
   if (Array.isArray(ids)) for (const id of ids) push(id);
@@ -1118,12 +1122,13 @@ function buildTree(ui, skillId, render, state) {
 
   const section = el('div', { class: 'skill-tree-section' });
   const head = el('div', { class: 'sts-head' });
+  const bn = tree.branches || {};
   head.innerHTML = `
     <span class="sts-title">天赋分叉</span>
     <span class="sts-legend">
-      <i class="lg core"></i>核心
-      <i class="lg left"></i>左支·震怒
-      <i class="lg right"></i>右支·壁垒
+      <i class="lg core"></i>${escapeHTML(bn.root || '核心')}
+      <i class="lg left"></i>左支·${escapeHTML(bn.left || '左支')}
+      <i class="lg right"></i>右支·${escapeHTML(bn.right || '右支')}
       <i class="lg locked"></i>不可用
     </span>
     <span class="sts-avail">可分配 <b>${avail}</b></span>`;
@@ -1139,9 +1144,7 @@ function buildTree(ui, skillId, render, state) {
   if (!tree.nodes || !tree.nodes.length) {
     canvas.appendChild(el('p', {
       class: 'empty',
-      text: player && player.type === 'mage'
-        ? '法师技能由元素自动循环驱动，本版本暂未开放分叉天赋；可用精炼石提升技能等级。'
-        : '该技能暂时没有可加点的天赋分支',
+      text: '该技能暂时没有可加点的天赋分支',
     }));
     return section;
   }

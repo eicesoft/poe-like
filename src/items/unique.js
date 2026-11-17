@@ -171,6 +171,217 @@ export const UNIQUES = [
     effectStats: { attackSpeedMult: 0.3, physDamageMult: 0.9 },
     flavor: '所有拿起它的人都变得更强，也变得更快地流血。锤柄上刻着一行小字：「痛，即是养料。」',
   },
+
+  // ══════════════════════════════════════════════════════════════════════
+  // 法师（暗金）
+  // ══════════════════════════════════════════════════════════════════════
+  {
+    id: 'spark_of_the_apprentice',
+    name: '学徒之火花',
+    baseId: 'apprentice_wand',
+    levelReq: 3,
+    icon: '🪄',
+    uniqueAffixText: '全局伤害 +8%，火焰 / 冰霜 / 闪电伤害 +10%，法力 +20',
+    stats: {
+      mana: 20, manaRegen: 1, damageMult: 0.08,
+      fireDamageMult: 0.1, coldDamageMult: 0.1, lightningDamageMult: 0.1,
+    },
+    extraLines: ['+20 法力', '每秒回复 1 点法力', '+8% 全局伤害', '+10% 火焰 / 冰霜 / 闪电伤害'],
+    legendaryEffect: { id: 'apprentice_spark', desc: '击杀敌人时回复 8% 最大法力，并短暂提高移动速度' },
+    effectStats: { mana: 20, manaRegen: 1, damageMult: 0.08 },
+    flavor: '每一位大法师的第一根法杖都烧焦过自己的眉毛。杖尖的火花不大，却足以点亮整条通往奥术的路。',
+  },
+  {
+    id: 'stormcaller_wand',
+    name: '唤雷魔杖',
+    baseId: 'runed_wand',
+    levelReq: 18,
+    icon: '⚡',
+    uniqueAffixText: '闪电伤害 +45%，附加 8 - 30 闪电伤害，冷却缩减 +10%',
+    stats: {
+      lightningDamageMult: 0.45, addedLightningMin: 8, addedLightningMax: 30,
+      cdrMult: 0.1, critChance: 0.05, mana: 24,
+    },
+    extraLines: ['+45% 闪电伤害', '8 - 30 附加闪电伤害', '+10% 冷却缩减', '+5% 暴击率', '+24 法力'],
+    legendaryEffect: { id: 'stormcaller', desc: '闪电技能有 20% 几率连锁到附近 2 名敌人，造成 50% 伤害' },
+    effectStats: { lightningDamageMult: 0.45, addedLightningMin: 8, addedLightningMax: 30 },
+    flavor: '杖身刻满了被雷劈过的符文。握紧它时，指尖会先于天空听见雷声。',
+  },
+  {
+    id: 'glacial_requiem',
+    name: '霜寂挽歌',
+    baseId: 'frost_staff',
+    levelReq: 22,
+    icon: '❄️',
+    uniqueAffixText: '冰霜伤害 +50%，附加 14 - 28 冰霜伤害，范围效果 +20%，技能等级 +1',
+    stats: {
+      coldDamageMult: 0.5, addedColdMin: 14, addedColdMax: 28,
+      aoeMult: 0.2, mana: 30, manaRegen: 2, skillLevelBonus: 1,
+    },
+    extraLines: ['+50% 冰霜伤害', '14 - 28 附加冰霜伤害', '+20% 范围效果', '+1 技能等级', '+30 法力'],
+    legendaryEffect: { id: 'glacial_requiem', desc: '冰霜技能命中的敌人移动速度降低 30%，持续 2 秒；对减速目标伤害提高 20%' },
+    effectStats: { coldDamageMult: 0.5, aoeMult: 0.2, skillLevelBonus: 1 },
+    flavor: '极北的吟游诗人用最后一口气唱完了挽歌，歌声冻成了这根法杖。挥动时仍能听见尾音。',
+  },
+  {
+    id: 'emberheart_staff',
+    name: '烬心法杖',
+    baseId: 'archmage_staff',
+    levelReq: 26,
+    icon: '🔥',
+    uniqueAffixText: '火焰伤害 +60%，全局伤害 +15%，附加 18 - 36 火焰伤害，技能等级 +1',
+    stats: {
+      fireDamageMult: 0.6, damageMult: 0.15, addedFireMin: 18, addedFireMax: 36,
+      skillLevelBonus: 1, mana: 40,
+    },
+    extraLines: ['+60% 火焰伤害', '+15% 全局伤害', '18 - 36 附加火焰伤害', '+1 技能等级', '+40 法力'],
+    legendaryEffect: { id: 'emberheart', desc: '火焰技能命中有 25% 几率引爆目标，对 3 范围内敌人造成一次火焰伤害' },
+    effectStats: { fireDamageMult: 0.6, damageMult: 0.15, addedFireMin: 18, addedFireMax: 36 },
+    flavor: '杖心的余烬从未熄灭。它不燃烧木柴，只燃烧持有者愿意献出的那部分耐心。',
+  },
+
+  // ── 法师防具 / 饰品（每个部位至少 2 件暗金，法师也能全身暗金）──
+  {
+    id: 'sanctum_aegis',
+    name: '圣所庇护',
+    baseId: 'kite_shield',
+    levelReq: 24,
+    icon: '🔷',
+    uniqueAffixText: '能量护盾 +180，法力 +40，格挡几率 +12%，元素抗性 +12%',
+    stats: {
+      energyShield: 180, mana: 40, blockChance: 0.12,
+      fireResist: 0.12, coldResist: 0.12, lightningResist: 0.12, damageMult: 0.08,
+    },
+    extraLines: ['+180 能量护盾', '+40 法力', '+12% 格挡几率', '+12% 火焰 / 冰霜 / 闪电抗性', '+8% 全局伤害'],
+    legendaryEffect: { id: 'sanctum_aegis', desc: '格挡成功时回复 10% 最大法力，并使下一次法术伤害提高 30%' },
+    effectStats: { energyShield: 180, blockChance: 0.12, mana: 40 },
+    flavor: '它原本是某座奥术圣所的门。门被拆下来当盾牌后，里面的光仍然认得回家的路。',
+  },
+  {
+    id: 'crown_of_the_archmage',
+    name: '大法师之冠',
+    baseId: 'arcane_hood',
+    levelReq: 24,
+    icon: '👑',
+    uniqueAffixText: '能量护盾 +90，法力 +50，全局伤害 +15%，技能等级 +1',
+    stats: {
+      energyShield: 90, mana: 50, skillLevelBonus: 1, damageMult: 0.15, cdrMult: 0.08,
+      fireResist: 0.1, coldResist: 0.1, lightningResist: 0.1,
+    },
+    extraLines: ['+90 能量护盾', '+50 法力', '+15% 全局伤害', '+1 技能等级', '+8% 冷却缩减', '+10% 元素抗性'],
+    legendaryEffect: { id: 'archmage_crown', desc: '施放技能时回复 2% 最大法力；法力高于 80% 时元素伤害额外提高 15%' },
+    effectStats: { energyShield: 90, mana: 50, skillLevelBonus: 1, damageMult: 0.15 },
+    flavor: '冠冕内侧刻着历任主人的名字，最后一个名字尚未刻完——它还在等一位配得上的人。',
+  },
+  {
+    id: 'robe_of_the_eternal_flux',
+    name: '永流法袍',
+    baseId: 'archmage_robe',
+    levelReq: 27,
+    icon: '🧥',
+    uniqueAffixText: '能量护盾 +220，法力 +80，每秒回复 3 点法力，元素抗性 +12%',
+    stats: {
+      energyShield: 220, mana: 80, manaRegen: 3, damageMult: 0.12,
+      fireResist: 0.12, coldResist: 0.12, lightningResist: 0.12,
+    },
+    extraLines: ['+220 能量护盾', '+80 法力', '每秒回复 3 点法力', '+12% 全局伤害', '+12% 火焰 / 冰霜 / 闪电抗性'],
+    legendaryEffect: { id: 'eternal_flux', desc: '能量护盾被击碎时释放一次元素新星，对周围敌人造成火焰、冰霜与闪电伤害' },
+    effectStats: { energyShield: 220, mana: 80, manaRegen: 3 },
+    flavor: '布料里织着一条不会干涸的河流。穿上它的人说，连呼吸都带着潮汐的节奏。',
+  },
+  {
+    id: 'handwraps_of_echoes',
+    name: '回响之缚',
+    baseId: 'silk_wraps',
+    levelReq: 20,
+    icon: '🧤',
+    uniqueAffixText: '全局伤害 +15%，范围伤害 +25%，冷却缩减 +12%',
+    stats: {
+      damageMult: 0.15, areaDamageMult: 0.25, cdrMult: 0.12, mana: 30, manaRegen: 1.5,
+    },
+    extraLines: ['+15% 全局伤害', '+25% 范围伤害', '+12% 冷却缩减', '+30 法力', '每秒回复 1.5 点法力'],
+    legendaryEffect: { id: 'echoing_handwraps', desc: '法术有 15% 几率在 1 秒后于目标处回响一次，造成 50% 伤害' },
+    effectStats: { damageMult: 0.15, areaDamageMult: 0.25, cdrMult: 0.12 },
+    flavor: '丝绸里封存着上一任主人最后一次施法的回声。它总比你的动作慢半拍，却从不缺席。',
+  },
+  {
+    id: 'phasewalker_slippers',
+    name: '相位行者便鞋',
+    baseId: 'windrider_boots',
+    levelReq: 22,
+    icon: '👟',
+    uniqueAffixText: '移动速度 +22%，冷却缩减 +10%，能量护盾 +60，冰霜抗性 +10%',
+    stats: {
+      moveSpeedMult: 0.22, cdrMult: 0.1, energyShield: 60, mana: 25, coldResist: 0.1,
+    },
+    extraLines: ['+22% 移动速度', '+10% 冷却缩减', '+60 能量护盾', '+25 法力', '+10% 冰霜抗性'],
+    legendaryEffect: { id: 'phasewalker', desc: '位移后 2 秒内元素伤害提高 20%，并留下一条减速敌人的寒霜轨迹' },
+    effectStats: { moveSpeedMult: 0.22, cdrMult: 0.1, energyShield: 60 },
+    flavor: '穿上它的人偶尔会比自己的影子早到一步。影子从不抱怨，只是默默追赶。',
+  },
+  {
+    id: 'band_of_resonance',
+    name: '共鸣之环',
+    baseId: 'diamond_ring',
+    levelReq: 17,
+    icon: '💠',
+    uniqueAffixText: '火焰 / 冰霜 / 闪电伤害 +15%，全局伤害 +8%，法力 +25',
+    stats: {
+      mana: 25, manaRegen: 2, damageMult: 0.08,
+      fireDamageMult: 0.15, coldDamageMult: 0.15, lightningDamageMult: 0.15,
+    },
+    extraLines: ['+15% 火焰 / 冰霜 / 闪电伤害', '+8% 全局伤害', '+25 法力', '每秒回复 2 点法力'],
+    legendaryEffect: { id: 'band_of_resonance', desc: '元素反应额外产生 20 点共鸣，并使其伤害提高 25%' },
+    effectStats: { damageMult: 0.08, mana: 25, manaRegen: 2 },
+    flavor: '三种颜色的光在戒面里互相追逐，谁也不肯先熄灭。法师们把它叫作「小三相」。',
+  },
+  {
+    id: 'pendant_of_the_threefold_path',
+    name: '三相吊坠',
+    baseId: 'amulet_of_war',
+    levelReq: 21,
+    icon: '🔱',
+    uniqueAffixText: '技能等级 +2，全局伤害 +12%，三种元素伤害 +10%',
+    stats: {
+      skillLevelBonus: 2, mana: 35, manaRegen: 2.5, damageMult: 0.12, cdrMult: 0.08,
+      fireDamageMult: 0.1, coldDamageMult: 0.1, lightningDamageMult: 0.1,
+      fireResist: 0.08, coldResist: 0.08, lightningResist: 0.08,
+    },
+    extraLines: ['+2 技能等级', '+12% 全局伤害', '+10% 火焰 / 冰霜 / 闪电伤害', '+8% 冷却缩减', '+35 法力', '+8% 元素抗性'],
+    legendaryEffect: { id: 'threefold_path', desc: '每次触发元素反应，使三种元素伤害在 6 秒内再提高 10%（可叠加 3 层）' },
+    effectStats: { skillLevelBonus: 2, damageMult: 0.12, mana: 35 },
+    flavor: '吊坠上的三道刻痕分别代表火、冰、雷。传说集齐三条路的人，能看见元素背后的同一张面孔。',
+  },
+  {
+    id: 'sash_of_the_archon',
+    name: '执政官腰带',
+    baseId: 'silk_sash',
+    levelReq: 19,
+    icon: '🎗️',
+    uniqueAffixText: '法力 +50，每秒回复 3 点法力，能量护盾 +80，冷却缩减 +10%',
+    stats: {
+      mana: 50, manaRegen: 3, energyShield: 80, cdrMult: 0.1, chaosResist: 0.1, damageMult: 0.1,
+    },
+    extraLines: ['+50 法力', '每秒回复 3 点法力', '+80 能量护盾', '+10% 冷却缩减', '+10% 混沌抗性', '+10% 全局伤害'],
+    legendaryEffect: { id: 'archon_sash', desc: '施法有 10% 几率不消耗法力；法力全满时技能伤害提高 15%' },
+    effectStats: { mana: 50, manaRegen: 3, energyShield: 80, cdrMult: 0.1 },
+    flavor: '奥术执政官的腰带从不系紧。他们说，真正束缚一个人的从来不是带扣，而是对力量的渴望。',
+  },
+  {
+    id: 'girdle_of_ruin',
+    name: '毁灭腰带',
+    baseId: 'girdle_of_power',
+    levelReq: 26,
+    icon: '💪',
+    uniqueAffixText: '生命 +120，护甲 +70，物理伤害 +25%，攻击伤害的 2% 转化为生命',
+    stats: {
+      life: 120, armor: 70, physDamageMult: 0.25, lifeLeech: 0.02, lifeOnHit: 8,
+    },
+    extraLines: ['+120 生命', '+70 护甲', '+25% 物理伤害', '攻击伤害的 2% 转化为生命', '击中时回复 8 点生命'],
+    legendaryEffect: { id: 'girdle_of_ruin', desc: '击杀敌人时回复 5% 最大生命，并在 3 秒内提高 15% 攻击速度' },
+    effectStats: { life: 120, armor: 70, physDamageMult: 0.25, lifeLeech: 0.02 },
+    flavor: '每一条裂缝都对应一场它没能阻止的屠杀。系上它的人，会把余生用来阻止下一场。',
+  },
 ];
 
 /** 传奇 id → 定义。 */
@@ -202,7 +413,8 @@ export function uniquesForLevel(level) {
  * 掷一件传奇定义。
  *
  * 权重规则：等级需求越接近当前等级 / 物品等级，权重越高（更容易掉当前可用的传奇）；
- * 同时全部传奇都有一定基础权重，避免低等级只掉同一件。
+ * 同时高阶传奇（levelReq 更高）带有额外权重，深层地图更容易见到成型向暗金。
+ * 全部传奇都有一定基础权重，避免低等级只掉同一件。
  *
  * §filter§ 可选，用于把传奇限定在某类槽位（generateItem 指定 slot 时使用）：
  *   传入 (uniqueDef) => boolean，只有返回 true 的传奇参与抽取。
@@ -225,7 +437,10 @@ export function tryUnique(rng, level = 1, filter = null) {
   if (!pool.length) return UNIQUES[0];
   const weighted = pool.map((u) => {
     const gap = Math.abs(lv - u.levelReq);
-    return { weight: (u.dropWeight || 1) * (1 + 12 / (1 + gap)), base: u };
+    // 等级越接近当前物品等级越容易掉；同时按 levelReq 给高阶暗金一个额外权重，
+    // 让深层地图更容易见到成型向的高阶暗金，而不是反复掉低级同一件。
+    const highTier = 1 + Math.max(0, (u.levelReq || 1) - 1) / 50;
+    return { weight: (u.dropWeight || 1) * (1 + 12 / (1 + gap)) * highTier, base: u };
   });
   return /** @type {UniqueDef} */ (r.weighted(weighted)).base;
 }

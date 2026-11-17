@@ -4,12 +4,12 @@
 // 所以这里对 app 模块用命名空间 import（而不是具名 import）：即使某个新导出暂时不存在，
 // 也不会让整个入口模块（以及依赖它的所有 UI）加载失败。
 import {
-  createGame, updateGame, clearEvents, revivePlayer, travelToNewMap,
+  createGame, updateGame, clearEvents,
+  leaveCurrentMap, reviveAtHome, enterHome,
   doTakeTalent, doRefundTalent, doSkillRankUp, doEquipFromBag, doPickup, doUnequip, doSell, doSellAllJunk,
-  doSetMagePreset,
+  doSetMagePreset, doStashDeposit, doStashWithdraw, doBuyMerchantItem, doGamble,
 } from '../game/app.js';
 import * as appMod from '../game/app.js';
-import { loadMap } from '../game/world.js';
 import { sortBag } from '../game/inventory.js';
 import { Input } from '../game/input.js';
 import { GameUI } from './ui.js';
@@ -415,7 +415,7 @@ function saveNow(silent = false) {
     console.warn('[save] 存档失败：localStorage 不可用或被禁用，游戏继续运行');
   }
   if (!silent && ui) {
-    if (ok) ui.addLog(`💾 已保存（Lv.${game.world.player.level} · 第 ${game.world.tier} 层）`, '#8fbf8f');
+    if (ok) ui.addLog(`💾 已保存（Lv.${game.world.player.level} · ${game.world.map?.isHome ? '庇护所' : `第 ${game.world.tier} 层`}）`, '#8fbf8f');
     else ui.addLog('⚠ 保存失败（浏览器禁用了本地存储）', '#ff6a5a');
   }
   return ok;
@@ -513,7 +513,7 @@ function refreshStartScreen() {
   if (info) {
     const parts = [
       `存档：${classLabel} · Lv.${sum.level}`,
-      `第 ${sum.tier} 层`,
+      `${sum.tier > 0 ? `第 ${sum.tier} 层` : '庇护所'}`,
       `金币 ${sum.gold}`,
       `游戏 ${formatPlayTime(sum.playTime)}`,
     ];
@@ -563,8 +563,9 @@ function startGame() {
   }
   _pendingSave = null;
   if (saveApplied) {
-    // applySave 只记了目标层数，这里真正把地图换成存档层（loadMap 会重置怪物/掉落与玩家位置）
-    try { loadMap(game.world, { tier: game.world.tier }); } catch (e) { console.warn('[save] 换图失败', e); }
+    // applySave 把 world.tier 设为存档层数；**读档也先进入庇护所**，
+    // 战斗之门再按历史进度通往该层（层级 / 装备 / 天赋都不会丢）。
+    try { enterHome(game, game.world.tier); } catch (e) { console.warn('[save] 进入庇护所失败', e); }
     try {
       if (typeof game.recalcPlayer === 'function') game.recalcPlayer();
       if (typeof game.world.__syncTalentPoints === 'function') game.world.__syncTalentPoints();
@@ -574,9 +575,14 @@ function startGame() {
   setState('ui', new GameUI(game));
   game.ui = ui;
   game.actions = {
-    revive: () => revivePlayer(game),
-    newMap: () => travelToNewMap(game),
+    revive: () => reviveAtHome(game),
+    newMap: () => leaveCurrentMap(game),
     pickup: () => doPickup(game),
+    // 庇护所：仓库 / 商人 / 赌徒
+    stashDeposit: (i) => doStashDeposit(game, i),
+    stashWithdraw: (i) => doStashWithdraw(game, i),
+    buyItem: (i) => doBuyMerchantItem(game, i),
+    gamble: () => doGamble(game),
     equipFromBag: (i) => doEquipFromBag(game, i),
     unequip: (s) => doUnequip(game, s),
     sell: (i) => doSell(game, i),
@@ -621,11 +627,14 @@ function startGame() {
   ui.updateSkillNotify();
   _lastLevel = game.world.player.level | 0;
   if (saveApplied && restoreInfo) {
-    ui.addLog(`已读取存档：${restoreInfo.classId === 'mage' ? '元素法师' : '战士'} · Lv.${restoreInfo.level} · 第 ${restoreInfo.tier} 层 · 金币 ${restoreInfo.gold}`, '#8be8ff');
-  } else if (game.world.player.type === 'mage') {
-    ui.addLog('法师自动施法：Q/W/E/R 由循环自动释放 · 左键锁定目标 · T 元素狂潮（共鸣满） · 空格闪现 · K 技能 · C 属性', '#9ad8ff');
+    ui.addLog(`已读取存档：${restoreInfo.classId === 'mage' ? '元素法师' : '战士'} · Lv.${restoreInfo.level} · 庇护所${restoreInfo.tier > 0 ? `（历史进度：第 ${restoreInfo.tier} 层）` : ''} · 金币 ${restoreInfo.gold}`, '#8be8ff');
   } else {
-    ui.addLog('方向键 / WASD 移动 · Q W E R T 技能 · 左键攻击 · 空格翻滚 · F 拾取 · I 背包 · K/Tab 技能天赋 · P 天赋 · C 属性 · ESC 暂停', '#c8a25a');
+    ui.addLog('庇护所：靠近仓库 / 商人 / 赌徒按 F 互动 · 战斗之门按 F 或 T 开启战斗地图', '#ffcf7a');
+    if (game.world.player.type === 'mage') {
+      ui.addLog('法师自动施法：Q/W/E/R 由循环自动释放 · 左键锁定目标 · T 元素狂潮（共鸣满） · 空格闪现 · K 技能 · C 属性', '#9ad8ff');
+    } else {
+      ui.addLog('方向键 / WASD 移动 · Q W E R T 技能 · 左键攻击 · 空格翻滚 · F 互动/拾取 · I 背包 · K/Tab 技能天赋 · P 天赋 · C 属性 · ESC 暂停', '#c8a25a');
+    }
   }
   setState('running', true);
   setState('lastT', performance.now());
@@ -949,8 +958,10 @@ function runHotkey(name, spec) {
     if (isInputBlocked()) return false;
     if (spec.action === 'pickup') { doPickup(game); return true; }
     if (spec.action === 'newMap') {
-      travelToNewMap(game);
-      ui.addLog('你回到了营地，前往更深的第 ' + game.world.tier + ' 层', '#c8a25a');
+      const wasHome = !!(game.world.map && game.world.map.isHome);
+      if (game.actions && typeof game.actions.newMap === 'function') game.actions.newMap();
+      else leaveCurrentMap(game);
+      ui.addLog(wasHome ? '战斗之门开启 · 进入第 ' + game.world.tier + ' 层' : '你回到了庇护所', '#c8a25a');
       if (typeof ui.onMapChange === 'function') ui.onMapChange();
       autoSave(game.world.time || 0); // 换图后自动存档（节流 ≤1 次/10s）
       return true;

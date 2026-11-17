@@ -34,6 +34,9 @@ export function createInventory() {
     equip: Object.fromEntries(EQUIP_SLOTS.map((s) => [s.id, null])),
     bag: [],
     bagSize: 60,
+    /** 庇护所仓库（家）：与背包同样的装备实例，只是不随身携带 */
+    stash: [],
+    stashSize: 60,
     gold: 0,
     /** 未分配的天赋点 */
     talentPoints: 0,
@@ -101,6 +104,41 @@ export function addToBag(inv, item) {
   if (!item.uid) item.uid = newItemUid();
   inv.bag.push(item);
   return true;
+}
+
+/** 仓库容量（旧存档没有 stashSize 时的兜底）。 */
+export function stashSizeOf(inv) {
+  const n = Number(inv && inv.stashSize);
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : 60;
+}
+
+/**
+ * 背包 → 仓库。成功返回物品，失败返回 null。
+ * 失败原因：下标无效 / 仓库已满。
+ */
+export function depositToStash(inv, bagIndex) {
+  if (!inv || !Array.isArray(inv.bag)) return null;
+  if (!Array.isArray(inv.stash)) inv.stash = [];
+  const item = inv.bag[bagIndex];
+  if (!item) return null;
+  if (inv.stash.length >= stashSizeOf(inv)) return null;
+  inv.bag.splice(bagIndex, 1);
+  inv.stash.push(item);
+  return item;
+}
+
+/**
+ * 仓库 → 背包。成功返回物品，失败返回 null。
+ * 失败原因：下标无效 / 背包已满。
+ */
+export function withdrawFromStash(inv, stashIndex) {
+  if (!inv || !Array.isArray(inv.stash)) return null;
+  const item = inv.stash[stashIndex];
+  if (!item) return null;
+  if (inv.bag.length >= inv.bagSize) return null;
+  inv.stash.splice(stashIndex, 1);
+  inv.bag.push(item);
+  return item;
 }
 
 // 全局不变量守护：任何时刻 equip 槽位集合必须保持 10 个键（防止某处误用 Object.fromEntries/删除键导致槽位丢失）

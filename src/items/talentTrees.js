@@ -1,9 +1,9 @@
 // @file src/items/talentTrees.js
 // 天赋树选择器：根据职业返回对应的天赋树数据。
 //
-// 游戏里同时存在两棵树：
-//   · 战士 —— items/talentTree.js 的 127 节点三环树（旧契约，保持不变）
-//   · 法师 —— items/mageTalentTree.js 的四主干元素树
+// 游戏里同时存在两棵树（各 70 节点，数量与构筑深度对齐）：
+//   · 战士 —— items/talentTree.js 的 6 主干 + 内环网络
+//   · 法师 —— items/mageTalentTree.js 的 4 主干 + 内外环网络
 //
 // app / UI / 存档都通过本模块取「当前职业的树」，避免每处各写一遍 if (mage)。
 
